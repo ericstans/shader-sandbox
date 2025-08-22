@@ -19,6 +19,7 @@ import { aurora2Shader } from './shaders/aurora2Shader.js';
 import { starfieldShader } from './shaders/starfieldShader.js';
 import gridConcentricCShader from './shaders/gridConcentricCShader.js';
 import gridConcentricCShader2 from './shaders/gridConcentricCShader2.js';
+import gridConcentricCShader3 from './shaders/gridConcentricCShader3.js';
 	// --- Shader imports ---
 
 	// Canvas and context setup
@@ -116,7 +117,8 @@ import gridConcentricCShader2 from './shaders/gridConcentricCShader2.js';
 		pachinko70sShader,
 		marbleMadnessInfiniteShader,
 		gridConcentricCShader,
-		gridConcentricCShader2
+		gridConcentricCShader2,
+		gridConcentricCShader3
 	];
 
 
