@@ -1,3 +1,13 @@
+import { marbleMadnessInfiniteShader } from './shaders/marbleMadnessInfiniteShader.js';
+import { marbleMadnessShader } from './shaders/marbleMadnessShader.js';
+import { pachinkoShader } from './shaders/pachinkoShader.js';
+import { pachinko70sShader } from './shaders/pachinko70sShader.js';
+import { lowPolySpheresShader } from './shaders/lowPolySpheresShader.js';
+import { ballpointPen5Shader } from './shaders/ballpointPen5Shader.js';
+import { ballpointPen4Shader } from './shaders/ballpointPen4Shader.js';
+import { ballpointPen3Shader } from './shaders/ballpointPen3Shader.js';
+import { ballpointPen2Shader } from './shaders/ballpointPen2Shader.js';
+import { ballpointPenShader } from './shaders/ballpointPenShader.js';
 import { win95Maze2Shader } from './shaders/win95Maze2Shader.js';
 import { horseRaceShader } from './shaders/horseRaceShader.js';
 import { win95MazeShader } from './shaders/win95MazeShader.js';
@@ -94,7 +104,17 @@ import { starfieldShader } from './shaders/starfieldShader.js';
 		pipes95Shader, pipes95_2Shader, pipes95_3Shader, pipes95_4Shader, shusakuGoShader, theWaveShader, theWave2Shader, theWave3Shader, theWave4Shader,
 		auroraShader, mandelbrotShader, digitalRainShader, aurora2Shader, aurora3Shader, starfieldShader, starfield2Shader, oneillShader, oneill2Shader, oneill3Shader, horseRaceShader,
 		win95MazeShader,
-		win95Maze2Shader
+		win95Maze2Shader,
+		ballpointPenShader,
+		ballpointPen2Shader,
+		ballpointPen3Shader,
+		ballpointPen4Shader,
+		ballpointPen5Shader,
+		lowPolySpheresShader,
+		pachinkoShader,
+		pachinko70sShader,
+		marbleMadnessShader,
+		marbleMadnessInfiniteShader
 	];
 	let currentShader = 0;
 	if (select) {
