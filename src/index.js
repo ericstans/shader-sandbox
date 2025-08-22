@@ -92,22 +92,8 @@ import { starfieldShader } from './shaders/starfieldShader.js';
 		pipes95Shader, pipes95_2Shader, pipes95_3Shader, pipes95_4Shader, shusakuGoShader, theWaveShader, theWave2Shader, theWave3Shader, theWave4Shader,
 		auroraShader, mandelbrotShader, digitalRainShader, aurora2Shader, aurora3Shader, starfieldShader, starfield2Shader, oneillShader, oneill2Shader, oneill3Shader, horseRaceShader
 	];
-	const shaderNames = [
-		'Demo Scene 1', 'Demo Scene 2', 'Cubes', 'Cubes 2', 'Cubes 3', 'Cubes 4', 'Dancing Lines', 'Outrun ASCII',
-		'Pipes 95', 'Pipes 95 2', 'Pipes 95 3', 'Pipes 95 4', 'Shusaku Go', 'The Wave', 'The Wave 2', 'The Wave 3', 'The Wave 4',
-		'Aurora Borealis', 'Mandelbrot Explorer', 'Digital Rain', 'Aurora Borealis 2 (Wispy)', 'Aurora Borealis 3 (Wide/Fast)',
-		'Starfield (Win95)', 'Starfield 2 (Hyperspace)', "Planet + O'Neill Cylinder", "Planet + O'Neill Cylinder 2", "Planet + O'Neill Cylinder 3", 'Horse Race'
-	];
 	let currentShader = 0;
 	if (select) {
-		// Dynamically populate dropdown
-		select.innerHTML = '';
-		shaderNames.forEach((name, i) => {
-			const opt = document.createElement('option');
-			opt.value = i;
-			opt.textContent = name;
-			select.appendChild(opt);
-		});
 		// Always select the last option on page load
 		select.selectedIndex = shaders.length - 1;
 		currentShader = select.selectedIndex;
