@@ -1,5 +1,9 @@
+import { oneill2Shader } from './shaders/oneill2Shader.js';
+import { oneillShader } from './shaders/oneillShader.js';
+import { starfield2Shader } from './shaders/starfield2Shader.js';
 import { aurora3Shader } from './shaders/aurora3Shader.js';
 import { aurora2Shader } from './shaders/aurora2Shader.js';
+import { starfieldShader } from './shaders/starfieldShader.js';
 	// --- Shader imports ---
 
 	// Canvas and context setup
@@ -84,7 +88,7 @@ import { aurora2Shader } from './shaders/aurora2Shader.js';
 	const shaders = [
 		plasma1, plasma2, cubesShader, cubes2Shader, cubes3Shader, cubes4Shader, dancingLinesShader, outrunAsciiShader,
 		pipes95Shader, pipes95_2Shader, pipes95_3Shader, pipes95_4Shader, shusakuGoShader, theWaveShader, theWave2Shader, theWave3Shader, theWave4Shader,
-				auroraShader, mandelbrotShader, digitalRainShader, aurora2Shader, aurora3Shader
+		auroraShader, mandelbrotShader, digitalRainShader, aurora2Shader, aurora3Shader, starfieldShader, starfield2Shader, oneillShader, oneill2Shader
 	];
 	let currentShader = 0;
 	if (select) {

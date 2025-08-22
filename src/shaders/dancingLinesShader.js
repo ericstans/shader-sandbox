@@ -1,3 +1,4 @@
+
 // Shader 7: Dancing Lines (Oskar Fischinger 1930 inspired)
 export function dancingLinesShader(ctx, t) {
     const width = ctx.canvas.width;
