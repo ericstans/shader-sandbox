@@ -1,5 +1,4 @@
 import { marbleMadnessInfiniteShader } from './shaders/marbleMadnessInfiniteShader.js';
-import { marbleMadnessShader } from './shaders/marbleMadnessShader.js';
 import { pachinkoShader } from './shaders/pachinkoShader.js';
 import { pachinko70sShader } from './shaders/pachinko70sShader.js';
 import { lowPolySpheresShader } from './shaders/lowPolySpheresShader.js';
@@ -113,7 +112,6 @@ import { starfieldShader } from './shaders/starfieldShader.js';
 		lowPolySpheresShader,
 		pachinkoShader,
 		pachinko70sShader,
-		marbleMadnessShader,
 		marbleMadnessInfiniteShader
 	];
 	let currentShader = 0;
