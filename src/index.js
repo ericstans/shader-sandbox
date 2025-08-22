@@ -1,4 +1,6 @@
+import { win95Maze2Shader } from './shaders/win95Maze2Shader.js';
 import { horseRaceShader } from './shaders/horseRaceShader.js';
+import { win95MazeShader } from './shaders/win95MazeShader.js';
 import { oneill2Shader } from './shaders/oneill2Shader.js';
 import { oneillShader } from './shaders/oneillShader.js';
 import { oneill3Shader } from './shaders/oneill3Shader.js';
@@ -90,7 +92,9 @@ import { starfieldShader } from './shaders/starfieldShader.js';
 	const shaders = [
 		plasma1, plasma2, cubesShader, cubes2Shader, cubes3Shader, cubes4Shader, dancingLinesShader, outrunAsciiShader,
 		pipes95Shader, pipes95_2Shader, pipes95_3Shader, pipes95_4Shader, shusakuGoShader, theWaveShader, theWave2Shader, theWave3Shader, theWave4Shader,
-		auroraShader, mandelbrotShader, digitalRainShader, aurora2Shader, aurora3Shader, starfieldShader, starfield2Shader, oneillShader, oneill2Shader, oneill3Shader, horseRaceShader
+		auroraShader, mandelbrotShader, digitalRainShader, aurora2Shader, aurora3Shader, starfieldShader, starfield2Shader, oneillShader, oneill2Shader, oneill3Shader, horseRaceShader,
+		win95MazeShader,
+		win95Maze2Shader
 	];
 	let currentShader = 0;
 	if (select) {
