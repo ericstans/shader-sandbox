@@ -1,3 +1,4 @@
+import gridPsychedelicCirclesShader from './shaders/gridPsychedelicCirclesShader.js';
 import { marbleMadnessInfiniteShader } from './shaders/marbleMadnessInfiniteShader.js';
 import { pachinkoShader } from './shaders/pachinkoShader.js';
 import { pachinko70sShader } from './shaders/pachinko70sShader.js';
@@ -118,7 +119,8 @@ import gridConcentricCShader3 from './shaders/gridConcentricCShader3.js';
 		marbleMadnessInfiniteShader,
 		gridConcentricCShader,
 		gridConcentricCShader2,
-		gridConcentricCShader3
+		gridConcentricCShader3,
+		gridPsychedelicCirclesShader
 	];
 
 
