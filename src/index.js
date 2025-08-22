@@ -17,6 +17,8 @@ import { starfield2Shader } from './shaders/starfield2Shader.js';
 import { aurora3Shader } from './shaders/aurora3Shader.js';
 import { aurora2Shader } from './shaders/aurora2Shader.js';
 import { starfieldShader } from './shaders/starfieldShader.js';
+import gridConcentricCShader from './shaders/gridConcentricCShader.js';
+import gridConcentricCShader2 from './shaders/gridConcentricCShader2.js';
 	// --- Shader imports ---
 
 	// Canvas and context setup
@@ -112,15 +114,39 @@ import { starfieldShader } from './shaders/starfieldShader.js';
 		lowPolySpheresShader,
 		pachinkoShader,
 		pachinko70sShader,
-		marbleMadnessInfiniteShader
+		marbleMadnessInfiniteShader,
+		gridConcentricCShader,
+		gridConcentricCShader2
 	];
+
+
 	let currentShader = 0;
 	if (select) {
 		// Always select the last option on page load
 		select.selectedIndex = shaders.length - 1;
 		currentShader = select.selectedIndex;
+		// On load, initialize state for the active shader
+		if (shaders[currentShader] && shaders[currentShader].onResize) {
+			shaders[currentShader].onResize({canvas, ctx, width, height});
+		}
+		// On load, set click handler if shader provides it
+		if (shaders[currentShader] && shaders[currentShader].onClick) {
+			canvas.onclick = (e) => shaders[currentShader].onClick(e, {canvas, ctx, width, height});
+		} else {
+			canvas.onclick = null;
+		}
 		select.addEventListener('change', () => {
 			currentShader = parseInt(select.value, 10) || 0;
+			// Remove any previous click handler
+			canvas.onclick = null;
+			// If the shader module provides a click handler, set it
+			if (shaders[currentShader] && shaders[currentShader].onClick) {
+				canvas.onclick = (e) => shaders[currentShader].onClick(e, {canvas, ctx, width, height});
+			}
+			// On shader switch, initialize state for the new shader
+			if (shaders[currentShader] && shaders[currentShader].onResize) {
+				shaders[currentShader].onResize({canvas, ctx, width, height});
+			}
 		});
 	}
 
@@ -132,29 +158,14 @@ import { starfieldShader } from './shaders/starfieldShader.js';
 			height = canvas.height;
 			imageData = ctx.getImageData(0, 0, width, height);
 			data = imageData.data;
-		}
-		if (currentShader < 2) {
-			// Plasma shaders (pixel-based)
-			let i = 0;
-			const plasma = shaders[currentShader];
-			for (let y = 0; y < height; y++) {
-				for (let x = 0; x < width; x++) {
-					const v = plasma(x, y, t);
-					// Map v from [-3,3] or [-4,4] to [0,1]
-					const norm = (v + 4) / 8;
-					// Color palette
-					const r = Math.floor(128 + 128 * Math.sin(Math.PI * norm));
-					const g = Math.floor(128 + 128 * Math.sin(Math.PI * norm + 2));
-					const b = Math.floor(128 + 128 * Math.sin(Math.PI * norm + 4));
-					data[i++] = r;
-					data[i++] = g;
-					data[i++] = b;
-					data[i++] = 255;
-				}
+			// If the shader module provides a resize handler, call it
+			if (shaders[currentShader] && shaders[currentShader].onResize) {
+				shaders[currentShader].onResize({canvas, ctx, width, height});
 			}
-			ctx.putImageData(imageData, 0, 0);
-		} else {
-			// Cubes/shader scenes: pass ctx, t, width, height for responsive drawing
+		}
+		if (shaders[currentShader] && typeof shaders[currentShader].animate === 'function') {
+			shaders[currentShader].animate(ctx, t, width, height);
+		} else if (typeof shaders[currentShader] === 'function') {
 			shaders[currentShader](ctx, t, width, height);
 		}
 		requestAnimationFrame(render);
