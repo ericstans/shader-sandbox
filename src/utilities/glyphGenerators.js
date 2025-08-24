@@ -1,3 +1,306 @@
+// Space Invaders-esque sprite glyph generator
+export function randomSpaceInvaderGlyph(width, height, leftNeighborType = null) {
+    // Use recognizable templates for classic invader types, with minor randomization
+    const glyph = emptyGlyph(width, height);
+    const cols = Math.floor(width/2);
+    const rows = height;
+    // Helper: set pixel and its mirror
+    function setSym(x, y) {
+        if (x >= 0 && x < cols && y >= 0 && y < rows) {
+            glyph[y][x] = 1;
+            glyph[y][width-1-x] = 1;
+        }
+    }
+    // Define templates (0=crab, 1=squid, 2=UFO, 3=bug, 4=rocket)
+    const templates = [
+        // Crab
+        [
+            '0011100',
+            '0111110',
+            '1111111',
+            '1101111',
+            '0111110',
+            '1011101',
+            '0100010',
+        ],
+        // Squid
+        [
+            '0011100',
+            '0111110',
+            '1111111',
+            '1011101',
+            '0011100',
+            '0101010',
+            '1010001',
+        ],
+        // UFO
+        [
+            '0001000',
+            '0011100',
+            '0111110',
+            '1111111',
+            '0111110',
+            '0011100',
+            '0100010',
+        ],
+        // Bug
+        [
+            '0011100',
+            '0111110',
+            '1111111',
+            '1011101',
+            '1111111',
+            '0101010',
+            '1010001',
+        ],
+        // Rocket/ship
+        [
+            '0001000',
+            '0011100',
+            '0111110',
+            '1111111',
+            '0011100',
+            '0011100',
+            '0111110',
+        ],
+    ];
+    // Pick a template
+    const tIdx = Math.floor(Math.random()*templates.length);
+    const t = templates[tIdx];
+    // Scale up by 3x
+    const scale = 3;
+    let tRows = t.length;
+    let tCols = t[0].length;
+    // Variation: randomly mirror horizontally
+    const mirror = Math.random() < 0.5;
+    // Variation: randomly shift rows or columns
+    let tVar = t.map(row => row.split(''));
+    // Row shift: randomly shift some rows left/right
+    for (let i = 0; i < tRows; i++) {
+        if (Math.random() < 0.4) {
+            let shift = Math.floor(Math.random()*3)-1; // -1, 0, or 1
+            if (shift !== 0) {
+                tVar[i] = shift > 0
+                    ? Array(shift).fill('0').concat(tVar[i].slice(0, tCols-shift))
+                    : tVar[i].slice(-shift).concat(Array(-shift).fill('0'));
+            }
+        }
+    }
+    // Column shift: randomly shift some columns up/down
+    if (Math.random() < 0.5) {
+        let col = Math.floor(Math.random()*tCols);
+        let shift = Math.floor(Math.random()*3)-1;
+        if (shift !== 0) {
+            let colVals = tVar.map(row => row[col]);
+            if (shift > 0) {
+                colVals = Array(shift).fill('0').concat(colVals.slice(0, tRows-shift));
+            } else {
+                colVals = colVals.slice(-shift).concat(Array(-shift).fill('0'));
+            }
+            for (let i = 0; i < tRows; i++) tVar[i][col] = colVals[i];
+        }
+    }
+    // Optionally mirror
+    function getVal(tx, ty) {
+        if (mirror) tx = tCols-1-tx;
+        return tVar[ty][tx];
+    }
+    const y0 = Math.floor((rows - tRows * scale) / 2);
+    const x0 = Math.floor((cols - tCols * scale) / 2);
+    // Draw template with new variation
+    for (let ty = 0; ty < tRows; ty++) {
+        for (let tx = 0; tx < tCols; tx++) {
+            if (getVal(tx, ty) === '1') {
+                for (let sy = 0; sy < scale; sy++) {
+                    for (let sx = 0; sx < scale; sx++) {
+                        setSym(x0 + tx*scale + sx, y0 + ty*scale + sy);
+                    }
+                }
+            }
+        }
+    }
+    // Optionally add a central dot or extra features
+    if (Math.random() < 0.3) setSym(Math.floor(cols/2), Math.floor(rows/2));
+    return glyph;
+}
+// Cat Face glyph generator: draws a simple cat face with ears, eyes, nose, mouth, and whiskers
+export function randomCatFaceGlyph(width, height, leftNeighborType = null) {
+    const glyph = emptyGlyph(width, height);
+    const cx = Math.floor(width / 2);
+    const cy = Math.floor(height / 2);
+    // Add more variation: face roundness, ear angle, eye size/pos, mouth shape, whisker angle
+    const faceR = Math.floor(Math.min(width, height) * (0.28 + Math.random()*0.12) + Math.random()*2);
+    const faceSquash = 0.88 + Math.random()*0.18; // 0.88..1.06
+    const earAngle = (Math.random()-0.5) * Math.PI/6; // -15..+15 deg
+    const earLen = 0.6 + Math.random()*0.5; // 0.6..1.1
+    const earTipSpread = 0.8 + Math.random()*0.5; // 0.8..1.3
+    const eyeSize = 1 + Math.floor(Math.random()*2);
+    const eyeYShift = Math.floor((Math.random()-0.5)*faceR*0.18);
+    const eyeXSpread = Math.floor(faceR * (0.38 + Math.random()*0.18));
+    const mouthType = Math.random(); // 0..1
+    const whiskerAngle = (Math.random()-0.5)*0.5; // -0.25..+0.25 rad
+    const hasMuzzleSpots = Math.random() < 0.5;
+    const hasForeheadMark = Math.random() < 0.3;
+    // Draw face outline (ellipse for squash)
+    for (let a = 0; a < Math.PI * 2; a += Math.PI / 32) {
+        let x = Math.round(cx + faceR * Math.cos(a));
+        let y = Math.round(cy + faceR * Math.sin(a) * faceSquash);
+        if (x >= 0 && x < width && y >= 0 && y < height) glyph[y][x] = 1;
+    }
+    // Draw ears (two triangles using lines)
+    function drawLine(x0, y0, x1, y1) {
+        x0 = Math.round(x0); y0 = Math.round(y0); x1 = Math.round(x1); y1 = Math.round(y1);
+        let dx = Math.abs(x1 - x0), sx = x0 < x1 ? 1 : -1;
+        let dy = -Math.abs(y1 - y0), sy = y0 < y1 ? 1 : -1;
+        let err = dx + dy, e2;
+        while (true) {
+            if (x0 >= 0 && x0 < width && y0 >= 0 && y0 < height) glyph[y0][x0] = 1;
+            if (x0 === x1 && y0 === y1) break;
+            e2 = 2 * err;
+            if (e2 >= dy) { err += dy; x0 += sx; }
+            if (e2 <= dx) { err += dx; y0 += sy; }
+        }
+    }
+    // Left ear points (poke out from behind the face)
+    let lx0 = cx - Math.floor(faceR * 0.7); // farther out
+    let ly0 = cy - Math.floor(faceR * 0.85 * faceSquash); // higher up
+    let ltipx = cx - Math.floor(faceR * 1.15 * earTipSpread * Math.cos(earAngle));
+    let ltipy = cy - faceR - Math.floor(faceR * (earLen+0.2) * Math.sin(earAngle));
+    let lx1 = cx - Math.floor(faceR * 0.25);
+    let ly1 = cy - faceR + Math.floor(faceR * 0.18 * faceSquash);
+    drawLine(lx0, ly0, ltipx, ltipy);
+    drawLine(ltipx, ltipy, lx1, ly1);
+    drawLine(lx1, ly1, lx0, ly0);
+    // Right ear points (poke out from behind the face)
+    let rx0 = cx + Math.floor(faceR * 0.7);
+    let ry0 = cy - Math.floor(faceR * 0.85 * faceSquash);
+    let rtipx = cx + Math.floor(faceR * 1.15 * earTipSpread * Math.cos(-earAngle));
+    let rtipy = cy - faceR - Math.floor(faceR * (earLen+0.2) * Math.sin(-earAngle));
+    let rx1 = cx + Math.floor(faceR * 0.25);
+    let ry1 = cy - faceR + Math.floor(faceR * 0.18 * faceSquash);
+    drawLine(rx0, ry0, rtipx, rtipy);
+    drawLine(rtipx, rtipy, rx1, ry1);
+    drawLine(rx1, ry1, rx0, ry0);
+    // Eyes (dots, with size/position variation)
+    let eyeY = cy - Math.floor(faceR * 0.2) + eyeYShift;
+    for (let dx of [-eyeXSpread, eyeXSpread]) {
+        let ex = cx + dx, ey = eyeY;
+        for (let i = -eyeSize; i <= eyeSize; i++) {
+            for (let j = -eyeSize; j <= eyeSize; j++) {
+                if (ex+i >= 0 && ex+i < width && ey+j >= 0 && ey+j < height && i*i+j*j <= eyeSize*eyeSize) {
+                    glyph[ey+j][ex+i] = 1;
+                }
+            }
+        }
+    }
+    // Nose (small triangle, with vertical offset)
+    let noseY = cy + Math.floor(faceR * 0.1) + Math.floor((Math.random()-0.5)*2);
+    for (let i = 0; i < 2; i++) {
+        for (let x = cx - i; x <= cx + i; x++) {
+            let y = noseY + i;
+            if (x >= 0 && x < width && y >= 0 && y < height) glyph[y][x] = 1;
+        }
+    }
+    // Mouth (:3 shape)
+    let mouthY = noseY + 2;
+    if (mouthY < height) {
+        // Left curve of :3
+        glyph[mouthY][cx-2] = 1;
+        glyph[mouthY+1 < height ? mouthY+1 : mouthY][cx-1] = 1;
+        // Right curve of :3
+        glyph[mouthY][cx+2] = 1;
+        glyph[mouthY+1 < height ? mouthY+1 : mouthY][cx+1] = 1;
+    }
+    // Improved whiskers: longer, more curved, more organic
+    function drawWhisker(x0, y0, dir, curve, len) {
+        // dir: -1 for left, 1 for right
+        for (let t = 0; t <= 1; t += 0.08) {
+            // Quadratic Bezier-like: start, control, end
+            let x = x0 + dir * len * t;
+            let y = y0 + curve * Math.pow(t, 1.5) * dir * 2 + (Math.random()-0.5)*0.2;
+            let ix = Math.round(x), iy = Math.round(y);
+            if (ix >= 0 && ix < width && iy >= 0 && iy < height) glyph[iy][ix] = 1;
+        }
+    }
+    let whiskerBaseY = cy + Math.floor(faceR * 0.1);
+    let whiskerLen = Math.floor(faceR * 1.1 + Math.random()*2);
+    for (let i = -1; i <= 1; i++) {
+        let wy = whiskerBaseY + i * 2;
+        let curve = (i === 0 ? 0.5 : 1.2) * (0.7 + Math.random()*0.5);
+        drawWhisker(cx-1, wy, -1, -curve, whiskerLen);
+        drawWhisker(cx+1, wy, 1, curve, whiskerLen);
+    }
+    // Muzzle spots (optional)
+    if (hasMuzzleSpots) {
+        for (let dx of [-2,2]) {
+            let mx = cx+dx, my = noseY+2;
+            if (mx >= 0 && mx < width && my >= 0 && my < height) glyph[my][mx] = 1;
+        }
+    }
+    // Forehead mark (optional)
+    if (hasForeheadMark) {
+        let markY = cy - Math.floor(faceR * 0.45);
+        for (let i = -1; i <= 1; i++) {
+            let mx = cx + i;
+            if (mx >= 0 && mx < width && markY >= 0 && markY < height) glyph[markY][mx] = 1;
+        }
+    }
+    return glyph;
+}
+// Continuous Squiggle glyph generator: one unbroken, looping line like an ampersand
+export function randomSquiggleGlyph(width, height, leftNeighborType = null) {
+    // Create an empty glyph grid
+    const glyph = emptyGlyph(width, height);
+    // Parameters for the squiggle
+    const cx = width / 2;
+    const cy = height / 2;
+    const a = 0.32 + Math.random() * 0.18; // amplitude as fraction of cell
+    const freq = 1.5 + Math.random() * 0.7; // number of loops
+    const phase = Math.random() * Math.PI * 2;
+    const squiggleLength = Math.PI * 2 * freq;
+    const thickness = 1;
+    // Draw a parametric squiggle (like a lissajous/ampersand)
+    for (let t = 0; t < squiggleLength; t += 0.02) {
+        // Lissajous/ampersand-like parametric curve
+        let x = cx + (width * a) * Math.sin(t + phase) * Math.cos(t * 0.5 + phase * 0.7);
+        let y = cy + (height * a) * Math.sin(t * 0.5 + phase * 0.3) * Math.cos(t + phase * 0.2);
+        // Optionally add a little noise for organic feel
+        x += (Math.random() - 0.5) * 0.5;
+        y += (Math.random() - 0.5) * 0.5;
+        // Draw thickness
+        for (let dx = -thickness; dx <= thickness; dx++) {
+            for (let dy = -thickness; dy <= thickness; dy++) {
+                let px = Math.round(x + dx);
+                let py = Math.round(y + dy);
+                if (px >= 0 && px < width && py >= 0 && py < height) {
+                    glyph[py][px] = 1;
+                }
+            }
+        }
+    }
+    // Optionally, close the loop for a more ampersand-like look
+    // Connect start and end
+    let x0 = cx + (width * a) * Math.sin(phase) * Math.cos(phase * 0.5 + phase * 0.7);
+    let y0 = cy + (height * a) * Math.sin(phase * 0.5 + phase * 0.3) * Math.cos(phase + phase * 0.2);
+    let x1 = cx + (width * a) * Math.sin(squiggleLength + phase) * Math.cos((squiggleLength) * 0.5 + phase * 0.7);
+    let y1 = cy + (height * a) * Math.sin((squiggleLength) * 0.5 + phase * 0.3) * Math.cos(squiggleLength + phase * 0.2);
+    // Simple Bresenham to connect start/end
+    function drawLine(x0, y0, x1, y1) {
+        x0 = Math.round(x0); y0 = Math.round(y0); x1 = Math.round(x1); y1 = Math.round(y1);
+        let dx = Math.abs(x1 - x0), sx = x0 < x1 ? 1 : -1;
+        let dy = -Math.abs(y1 - y0), sy = y0 < y1 ? 1 : -1;
+        let err = dx + dy, e2;
+        while (true) {
+            if (x0 >= 0 && x0 < width && y0 >= 0 && y0 < height) glyph[y0][x0] = 1;
+            if (x0 === x1 && y0 === y1) break;
+            e2 = 2 * err;
+            if (e2 >= dy) { err += dy; x0 += sx; }
+            if (e2 <= dx) { err += dx; y0 += sy; }
+        }
+    }
+    drawLine(x0, y0, x1, y1);
+    return glyph;
+}
 // Compound Hieroglyphic glyph generator: combines 2-3 simple hieroglyphic motifs
 export function randomCompoundHieroglyphicGlyph(width, height, leftNeighborType = null) {
     // Use the motifs from randomHieroglyphicGlyph, but combine 2-3 in one glyph

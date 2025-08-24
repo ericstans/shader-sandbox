@@ -45,6 +45,7 @@ import { theWave4Shader } from './shaders/theWave4Shader.js';
 import { auroraShader } from './shaders/auroraShader.js';
 import { mandelbrotShader } from './shaders/mandelbrotShader.js';
 import { digitalRainShader } from './shaders/digitalRainShader.js';
+import fishTankShader from './shaders/fishTankShader.js';
 import { randomizeGlyphLineWeights } from './utilities/glyphGenerators.js';
 
 // Glyph Generation Style dropdown
@@ -194,7 +195,8 @@ resizeCanvas();
 // Get the shader dropdown element
 const select = document.getElementById('shader-select');
 const shaders = [
-   {shader: plasma1, displayName: 'Demo Scene 1'},
+	{shader: plasma1, displayName: 'Demo Scene 1'},
+	{shader: fishTankShader, displayName: 'Fish Tank'},
    {shader: plasma2, displayName: 'Demo Scene 2'},
    {shader: cubesShader, displayName: 'Cubes'},
    {shader: cubes2Shader, displayName: 'Cubes 2'},
@@ -240,7 +242,8 @@ const shaders = [
 	{shader: gridGlyphShader, displayName: 'Grid Glyphs'},
 	{shader: gridGlyphShader2, displayName: 'Grid Glyphs 2'},
 	{shader: gridGlyphShader3, displayName: 'Grid Glyphs 3'},
-	{shader: require('./shaders/gridGlyphShader4.js').default, displayName: 'Grid Glyphs 4'}
+	{shader: gridGlyphShader4, displayName: 'Grid Glyphs 4'},
+	{shader: fishTankShader, displayName: 'Fish Tank'}
 ];
 
 // Dynamically populate the dropdown

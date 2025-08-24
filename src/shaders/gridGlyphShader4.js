@@ -368,6 +368,15 @@ function drawStroke(glyph, type) {
 
 // Contextual influence: leftNeighborType biases first stroke
 function randomBaseGlyph(width, height, leftNeighborType = null) {
+    if (typeof window !== 'undefined' && window.currentGlyphStyle === 'space-invader') {
+        return { glyph: glyphGenerators.randomSpaceInvaderGlyph(width, height, leftNeighborType), lastStrokeType: 'space-invader' };
+    }
+    if (typeof window !== 'undefined' && window.currentGlyphStyle === 'cat-face') {
+        return { glyph: glyphGenerators.randomCatFaceGlyph(width, height, leftNeighborType), lastStrokeType: 'cat-face' };
+    }
+    if (typeof window !== 'undefined' && window.currentGlyphStyle === 'squiggle') {
+        return { glyph: glyphGenerators.randomSquiggleGlyph(width, height, leftNeighborType), lastStrokeType: 'squiggle' };
+    }
     if (typeof window !== 'undefined' && window.currentGlyphStyle === 'compound-hieroglyphic') {
         return { glyph: glyphGenerators.randomCompoundHieroglyphicGlyph(width, height, leftNeighborType), lastStrokeType: 'compound-hieroglyphic' };
     }
