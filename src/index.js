@@ -1,5 +1,6 @@
 import plasma1 from './shaders/plasma1.js';
 import plasma2 from './shaders/plasma2.js';
+import seedGrowthShader from './shaders/seedGrowthShader.js';
 import gridPsychedelicCirclesShader from './shaders/gridPsychedelicCirclesShader.js';
 import gridGlyphShader from './shaders/gridGlyphShader.js';
 import gridGlyphShader2 from './shaders/gridGlyphShader2.js';
@@ -242,7 +243,8 @@ const shaders = [
 	{shader: gridGlyphShader2, displayName: 'Grid Glyphs 2'},
 	{shader: gridGlyphShader3, displayName: 'Grid Glyphs 3'},
 	{shader: gridGlyphShader4, displayName: 'Grid Glyphs 4'},
-	{shader: fishTankShader, displayName: 'Fish Tank'}
+	{shader: fishTankShader, displayName: 'Fish Tank'},
+	{shader: seedGrowthShader, displayName: 'Seed Growth'}
 ];
 
 // Dynamically populate the dropdown
@@ -255,6 +257,8 @@ if (select) {
 		select.appendChild(opt);
 	});
 }
+	// Register the new shader
+	window.registerShader && window.registerShader(seedGrowthShader);
 
 
 let currentShader = 0;

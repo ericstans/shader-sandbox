@@ -126,6 +126,22 @@ function resetFish(width, height) {
     // Define fish species
     const speciesList = [
         {
+            name: 'Eyeball Fish',
+            body: { rx: 0.5, ry: 0.5 }, // circular
+            tail: { len: 0.18, height: 0.18, style: 'fan' },
+            color: () => `hsl(320,90%,65%)`, // hot pink
+            eye: '#fff',
+            bigEye: true
+        },
+        {
+            name: 'Sturgeon',
+            body: { rx: 1.3, ry: 0.22 }, // long, slender
+            tail: { len: 0.7, height: 0.18, style: 'sturgeon' },
+            color: () => `hsl(${110+Math.random()*20},60%,32%)`, // deep green
+            eye: '#fff',
+            size: 44 + Math.random()*12 // much larger
+        },
+        {
             name: 'Goldfish',
             body: { rx: 0.7, ry: 0.32 },
             tail: { len: 0.38, height: 0.28, style: 'fan' },
@@ -206,7 +222,14 @@ function drawFish(ctx, f, t) {
     ctx.beginPath();
     let tailLen = f.size * (f.species.tail.len);
     let tailHeight = f.size * (f.species.tail.height);
-    if (f.species.tail.style === 'fan') {
+    if (f.species.tail.style === 'sturgeon') {
+        // Sturgeon: long, pointed, slightly forked tail
+        ctx.moveTo(-f.size*f.species.body.rx,0);
+        ctx.lineTo(-f.size*f.species.body.rx-f.size*f.species.tail.len*1.1, -tailHeight*0.7);
+        ctx.lineTo(-f.size*f.species.body.rx-f.size*f.species.tail.len*1.3, 0);
+        ctx.lineTo(-f.size*f.species.body.rx-f.size*f.species.tail.len*1.1, tailHeight*0.7);
+        ctx.closePath();
+    } else if (f.species.tail.style === 'fan') {
         ctx.moveTo(-f.size*f.species.body.rx,0);
         ctx.lineTo(-f.size*f.species.body.rx-tailLen, -tailHeight);
         ctx.lineTo(-f.size*f.species.body.rx-tailLen, tailHeight);
@@ -236,6 +259,32 @@ function drawFish(ctx, f, t) {
     ctx.fillStyle = f.color;
     ctx.globalAlpha = 0.85;
     ctx.fill();
+
+    // --- Draw spikes for Sturgeon ---
+    if (f.species.name === 'Sturgeon') {
+        ctx.save();
+        ctx.globalAlpha = 0.7;
+        ctx.strokeStyle = '#e0f8d0';
+        ctx.fillStyle = '#e0f8d0';
+        let nSpikes = 7;
+        let bodyLen = f.size * f.species.body.rx * 2;
+        let bodyTopY = -f.size * f.species.body.ry;
+        for (let i = 0; i < nSpikes; i++) {
+            let frac = i / (nSpikes-1);
+            let spikeX = -f.size*f.species.body.rx + frac*bodyLen;
+            let spikeY = bodyTopY;
+            let spikeH = f.size * 0.22 + Math.sin(t*0.5 + i)*f.size*0.03;
+            ctx.beginPath();
+            ctx.moveTo(spikeX, spikeY);
+            ctx.lineTo(spikeX, spikeY - spikeH);
+            ctx.lineTo(spikeX + f.size*0.08, spikeY - spikeH*0.7);
+            ctx.lineTo(spikeX - f.size*0.08, spikeY - spikeH*0.7);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+        }
+        ctx.restore();
+    }
     // --- Optional stripe for Neon Tetra ---
     if (f.species.stripe) {
         ctx.save();
@@ -248,16 +297,36 @@ function drawFish(ctx, f, t) {
         ctx.restore();
     }
     // --- Eye ---
-    ctx.beginPath();
-    ctx.arc(f.size*0.32, -f.size*0.08, f.size*0.09, 0, Math.PI*2);
-    ctx.fillStyle = f.species.eye || '#fff';
-    ctx.globalAlpha = 0.9;
-    ctx.fill();
-    ctx.beginPath();
-    ctx.arc(f.size*0.36, -f.size*0.08, f.size*0.04, 0, Math.PI*2);
-    ctx.fillStyle = '#222';
-    ctx.globalAlpha = 1;
-    ctx.fill();
+    if (f.species.bigEye) {
+        // Huge eyeball, centered
+        ctx.beginPath();
+        ctx.arc(f.size*0.18, 0, f.size*0.22, 0, Math.PI*2);
+        ctx.fillStyle = f.species.eye || '#fff';
+        ctx.globalAlpha = 0.97;
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(f.size*0.18, 0, f.size*0.11, 0, Math.PI*2);
+        ctx.fillStyle = '#222';
+        ctx.globalAlpha = 1;
+        ctx.fill();
+        // Add a little highlight
+        ctx.beginPath();
+        ctx.arc(f.size*0.22, -f.size*0.06, f.size*0.04, 0, Math.PI*2);
+        ctx.fillStyle = '#fff8';
+        ctx.globalAlpha = 1;
+        ctx.fill();
+    } else {
+        ctx.beginPath();
+        ctx.arc(f.size*0.32, -f.size*0.08, f.size*0.09, 0, Math.PI*2);
+        ctx.fillStyle = f.species.eye || '#fff';
+        ctx.globalAlpha = 0.9;
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(f.size*0.36, -f.size*0.08, f.size*0.04, 0, Math.PI*2);
+        ctx.fillStyle = '#222';
+        ctx.globalAlpha = 1;
+        ctx.fill();
+    }
     ctx.restore();
 }
 
@@ -504,18 +573,42 @@ function animate(ctx, t, width, height) {
         }
     }
     // Fish
-    for (let f of fish) {
+    // Track indices of fish to remove (eaten)
+    let fishToRemove = new Set();
+    for (let i = 0; i < fish.length; i++) {
+        let f = fish[i];
         // If in lookForFood mode and has a pellet target, update target position to follow pellet
         if (f.behavior === 'lookForFood' && f.target && f.target.pellet && !f.target.pellet.eaten) {
             f.target.x = f.target.pellet.x;
             f.target.y = f.target.pellet.y;
         }
+
+        // Sturgeon predation: eat other fish they encounter
+        if (f.species && f.species.name === 'Sturgeon') {
+            for (let j = 0; j < fish.length; j++) {
+                if (i === j) continue;
+                let prey = fish[j];
+                // Don't eat other sturgeons or already eaten fish
+                if (prey.species && prey.species.name === 'Sturgeon') continue;
+                if (fishToRemove.has(j)) continue;
+                // Only eat if close enough and sturgeon is bigger
+                let dx = f.x - prey.x;
+                let dy = f.y - prey.y;
+                let dist = Math.sqrt(dx*dx + dy*dy);
+                let eatRadius = Math.max(f.size * 0.7, 32);
+                if (dist < eatRadius && f.size > prey.size * 0.7) {
+                    fishToRemove.add(j);
+                }
+            }
+        }
         // Behavior timer
         f.behaviorTimer--;
         if (f.behaviorTimer <= 0) {
             // Rare chance: lay eggs (unless 50 or more fish)
-            if (fish.length < 50 && Math.random() < 1/50) {
-                let numEggs = 2 + Math.floor(Math.random()*4);
+            if (fish.length < 50 && Math.random() < 1/200) {
+                // If Eyeball Fish, lay way more eggs
+                let isEyeball = f.species && f.species.name === 'Eyeball Fish';
+                let numEggs = isEyeball ? (18 + Math.floor(Math.random()*10)) : (2 + Math.floor(Math.random()*4));
                 for (let i = 0; i < numEggs; i++) {
                     let angle = Math.random()*Math.PI*2;
                     let dist = 10 + Math.random()*18;
@@ -662,16 +755,21 @@ function animate(ctx, t, width, height) {
         if (swimmingBackwards) vx *= 0.25;
         f.x += vx;
         f.y += vy + Math.sin(t*0.08+f.x*0.01)*0.2;
-        drawFish(ctx, f, t);
+    drawFish(ctx, f, t);
         // Prevent fish from leaving tank (bounce off tank walls)
         const minX = wallW + f.size*0.7;
         const maxX = width - wallW - f.size*0.7;
         const minY = wallW + f.size*0.5;
         const maxY = height - wallW - f.size*0.5;
         if (f.x < minX) { f.x = minX; f.vx = Math.abs(f.vx); f.flip = false; }
-    if (f.x > maxX) { f.x = maxX; f.vx = -Math.abs(f.vx); f.flip = true; }
-    if (f.y < minY) { f.y = minY; f.vy = Math.abs(f.vy); }
-    if (f.y > maxY) { f.y = maxY; f.vy = -Math.abs(f.vy); }
+        if (f.x > maxX) { f.x = maxX; f.vx = -Math.abs(f.vx); f.flip = true; }
+        if (f.y < minY) { f.y = minY; f.vy = Math.abs(f.vy); }
+        if (f.y > maxY) { f.y = maxY; f.vy = -Math.abs(f.vy); }
+    }
+
+    // Remove eaten fish (except sturgeons)
+    if (fishToRemove.size > 0) {
+        fish = fish.filter((f, idx) => !fishToRemove.has(idx));
     }
 }
 
