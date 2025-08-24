@@ -5,11 +5,37 @@ const displayName = 'Seed Growth';
 
 let growthStart = null;
 let growthDuration = 40000; // ms (40 seconds)
+let cachedParams = null;
 
 function animate(ctx, t, width, height) {
     if (!growthStart) growthStart = performance.now();
     let elapsed = Math.min(performance.now() - growthStart, growthDuration);
     let progress = elapsed / growthDuration;
+
+    // Cache random params for roots, branches, leaves
+    if (!cachedParams || cachedParams.width !== width || cachedParams.height !== height) {
+        // Roots
+        let nRoots = 7;
+        let roots = [];
+        for (let i = 0; i < nRoots; i++) {
+            let frac = i / (nRoots - 1);
+            let angle = Math.PI * (0.7 + 0.6 * (frac - 0.5));
+            let lenFactor = 0.7 + Math.random() * 0.3;
+            roots.push({ angle, lenFactor });
+        }
+        // Branches
+        let nBranches = 6;
+        let branches = [];
+        for (let i = 0; i < nBranches; i++) {
+            let frac = nBranches === 1 ? 0.5 : i / (nBranches - 1);
+            let angle = -Math.PI / 2 + (Math.PI / 3) * (frac - 0.5);
+            let lenFactor = 0.7 + Math.random() * 0.3;
+            let leafAngleOffset = (Math.random() - 0.5) * 0.3;
+            let leafColor = `hsl(${100 + Math.random() * 30}, 60%, ${60 + Math.random() * 20}%)`;
+            branches.push({ angle, lenFactor, leafAngleOffset, leafColor });
+        }
+        cachedParams = { width, height, roots, branches };
+    }
 
     // Split ground: top = above, bottom = below
     const groundY = Math.floor(height * 0.55);
@@ -67,9 +93,9 @@ function animate(ctx, t, width, height) {
     let rootProgress = Math.min(1, progress / 0.4);
     let nRoots = 3 + Math.floor(rootProgress * 4);
     for (let i = 0; i < nRoots; i++) {
-        let frac = i / (nRoots - 1);
-        let angle = Math.PI * (0.7 + 0.6 * (frac - 0.5));
-        let rootLen = (height - groundY - 18) * rootProgress * (0.7 + Math.random() * 0.3);
+        let root = cachedParams.roots[i];
+        let angle = root.angle;
+        let rootLen = (height - groundY - 18) * rootProgress * root.lenFactor;
         ctx.save();
         ctx.strokeStyle = '#e0d0a0';
         ctx.lineWidth = 3.2 - 1.5 * rootProgress;
@@ -104,9 +130,14 @@ function animate(ctx, t, width, height) {
             let branchProgress = Math.min(1, (progress - 0.4) / 0.4);
             let nBranches = 2 + Math.floor(branchProgress * 4);
             for (let i = 0; i < nBranches; i++) {
-                let frac = i / (nBranches - 1);
-                let angle = -Math.PI / 2 + (Math.PI / 3) * (frac - 0.5);
-                let branchLen = 60 + 40 * branchProgress * (0.7 + Math.random() * 0.3);
+                let branch = cachedParams.branches[i];
+                let frac = nBranches === 1 ? 0.5 : i / (nBranches - 1);
+                // Each branch starts at a different time, so they grow out one by one
+                let branchAppear = 0.4 + 0.2 * frac; // e.g. 0.4, 0.5, 0.6, ...
+                let branchGrowProgress = Math.max(0, Math.min(1, (progress - branchAppear) / 0.18));
+                if (branchGrowProgress <= 0) continue; // not started yet
+                let angle = branch.angle;
+                let branchLen = (60 + 40 * branchProgress * branch.lenFactor) * branchGrowProgress;
                 let bx0 = seedX;
                 let by0 = seedY - 2 - stemLen * (0.3 + 0.5 * frac);
                 let bx1 = bx0 + Math.cos(angle) * branchLen * 0.5;
@@ -119,21 +150,21 @@ function animate(ctx, t, width, height) {
                 ctx.beginPath();
                 ctx.moveTo(bx0, by0);
                 ctx.bezierCurveTo(bx1, by1, bx1, by1, bx2, by2);
-                ctx.globalAlpha = 0.7 + 0.3 * branchProgress;
+                ctx.globalAlpha = 0.7 + 0.3 * branchGrowProgress;
                 ctx.stroke();
                 ctx.restore();
 
-                // Leaves (after 60% progress)
-                if (progress > 0.6) {
-                    let leafProgress = Math.min(1, (progress - 0.6) / 0.4);
+                // Leaves (after 60% progress, per branch)
+                if (progress > branchAppear + 0.18) {
+                    let leafProgress = Math.min(1, (progress - (branchAppear + 0.18)) / 0.22);
                     let leafLen = 18 + 18 * leafProgress;
-                    let leafAngle = angle + (Math.random() - 0.5) * 0.3;
+                    let leafAngle = angle + branch.leafAngleOffset;
                     let lx = bx2 + Math.cos(leafAngle) * 8;
                     let ly = by2 + Math.sin(leafAngle) * 8;
                     ctx.save();
                     ctx.beginPath();
                     ctx.ellipse(lx, ly, leafLen * 0.5, leafLen * 0.18, leafAngle, 0, Math.PI * 2);
-                    ctx.fillStyle = `hsl(${100 + Math.random() * 30}, 60%, ${60 + Math.random() * 20}%)`;
+                    ctx.fillStyle = branch.leafColor;
                     ctx.globalAlpha = 0.7 + 0.3 * leafProgress;
                     ctx.shadowColor = '#fff8';
                     ctx.shadowBlur = 8;
@@ -147,6 +178,7 @@ function animate(ctx, t, width, height) {
 
 function onResize({ canvas, ctx, width, height }) {
     growthStart = null;
+    cachedParams = null;
 }
 
 export default {
