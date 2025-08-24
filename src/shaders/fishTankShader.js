@@ -5,6 +5,8 @@ const displayName = 'Fish Tank';
 
 
 let fish = [];
+let netEvent = null;
+let eggs = [];
 let bubbles = [];
 let causticPhase = 0;
 let tankDecor = null;
@@ -120,23 +122,64 @@ function onClick(e, {canvas, ctx, width, height}) {
 function resetFish(width, height) {
     fish = [];
     const n = 6 + Math.floor(Math.random()*4);
+    // Define fish species
+    const speciesList = [
+        {
+            name: 'Goldfish',
+            body: { rx: 0.7, ry: 0.32 },
+            tail: { len: 0.38, height: 0.28, style: 'fan' },
+            color: () => `hsl(${35+Math.random()*20},90%,60%)`,
+            eye: '#fff',
+        },
+        {
+            name: 'Neon Tetra',
+            body: { rx: 0.9, ry: 0.18 },
+            tail: { len: 0.22, height: 0.12, style: 'fork' },
+            color: () => `hsl(200,80%,60%)`,
+            stripe: true,
+            eye: '#fff',
+        },
+        {
+            name: 'Betta',
+            body: { rx: 0.7, ry: 0.32 },
+            tail: { len: 0.7, height: 0.5, style: 'veil' },
+            color: () => `hsl(${300+Math.random()*60},70%,60%)`,
+            eye: '#fff',
+        },
+        {
+            name: 'Corydoras',
+            body: { rx: 0.6, ry: 0.28 },
+            tail: { len: 0.28, height: 0.18, style: 'fan' },
+            color: () => `hsl(${90+Math.random()*40},40%,60%)`,
+            eye: '#fff',
+        },
+        {
+            name: 'Guppy',
+            body: { rx: 0.5, ry: 0.22 },
+            tail: { len: 0.5, height: 0.32, style: 'triangle' },
+            color: () => `hsl(${Math.floor(Math.random()*360)},80%,65%)`,
+            eye: '#fff',
+        },
+    ];
     for (let i = 0; i < n; i++) {
         let dir = Math.random() < 0.5 ? 1 : -1;
         let vx = (Math.random()*0.5+0.3) * dir;
         let flip = Math.random() < 0.5;
         let behaviors = ['float','swim','explore','lookForFood'];
         let behavior = behaviors[Math.floor(Math.random()*behaviors.length)];
+        let species = speciesList[Math.floor(Math.random()*speciesList.length)];
         fish.push({
             x: Math.random()*width,
             y: Math.random()*height*0.7 + height*0.15,
             vx: vx,
             vy: (Math.random()-0.5)*0.2,
             size: 18+Math.random()*18,
-            color: `hsl(${Math.floor(Math.random()*360)},70%,60%)`,
+            color: species.color(),
             flip: flip,
             behavior: behavior,
             behaviorTimer: 60 + Math.random()*120, // frames until next behavior
-            target: null // for explore/food
+            target: null, // for explore/food
+            species: species
         });
     }
 }
@@ -157,26 +200,56 @@ function drawFish(ctx, f, t) {
     ctx.save();
     ctx.translate(f.x, f.y);
     if (f.flip) ctx.scale(-1,1);
-    ctx.rotate(Math.sin(t*0.7+f.x*0.01+f.y*0.01)*0.08);
+    ctx.rotate(Math.sin(t*0.7+f.x*0.01+f.y*0.01)*0.1);
+    // --- Draw tail by species ---
     ctx.beginPath();
-    // Body
-    ctx.ellipse(0,0, f.size*0.7, f.size*0.32, 0, 0, Math.PI*2);
-    ctx.fillStyle = f.color;
-    ctx.globalAlpha = 0.85;
-    ctx.fill();
-    // Tail
-    ctx.beginPath();
-    ctx.moveTo(-f.size*0.7,0);
-    ctx.lineTo(-f.size*0.7-f.size*0.32, -f.size*0.18);
-    ctx.lineTo(-f.size*0.7-f.size*0.32, f.size*0.18);
-    ctx.closePath();
+    let tailLen = f.size * (f.species.tail.len);
+    let tailHeight = f.size * (f.species.tail.height);
+    if (f.species.tail.style === 'fan') {
+        ctx.moveTo(-f.size*f.species.body.rx,0);
+        ctx.lineTo(-f.size*f.species.body.rx-tailLen, -tailHeight);
+        ctx.lineTo(-f.size*f.species.body.rx-tailLen, tailHeight);
+        ctx.closePath();
+    } else if (f.species.tail.style === 'fork') {
+        ctx.moveTo(-f.size*f.species.body.rx,0);
+        ctx.lineTo(-f.size*f.species.body.rx-tailLen, -tailHeight*0.7);
+        ctx.lineTo(-f.size*f.species.body.rx-tailLen*0.7, 0);
+        ctx.lineTo(-f.size*f.species.body.rx-tailLen, tailHeight*0.7);
+        ctx.closePath();
+    } else if (f.species.tail.style === 'veil') {
+        ctx.moveTo(-f.size*f.species.body.rx,0);
+        ctx.bezierCurveTo(-f.size*f.species.body.rx-tailLen*0.7, -tailHeight*1.2, -f.size*f.species.body.rx-tailLen*1.1, tailHeight*1.2, -f.size*f.species.body.rx-tailLen, 0);
+        ctx.closePath();
+    } else if (f.species.tail.style === 'triangle') {
+        ctx.moveTo(-f.size*f.species.body.rx,0);
+        ctx.lineTo(-f.size*f.species.body.rx-tailLen, -tailHeight);
+        ctx.lineTo(-f.size*f.species.body.rx-tailLen, tailHeight);
+        ctx.closePath();
+    }
     ctx.fillStyle = f.color;
     ctx.globalAlpha = 0.7;
     ctx.fill();
-    // Eye
+    // --- Draw body by species ---
+    ctx.beginPath();
+    ctx.ellipse(0,0, f.size*f.species.body.rx, f.size*f.species.body.ry, 0, 0, Math.PI*2);
+    ctx.fillStyle = f.color;
+    ctx.globalAlpha = 0.85;
+    ctx.fill();
+    // --- Optional stripe for Neon Tetra ---
+    if (f.species.stripe) {
+        ctx.save();
+        ctx.beginPath();
+        ctx.ellipse(0,0, f.size*f.species.body.rx*0.9, f.size*f.species.body.ry*0.35, 0, 0, Math.PI*2);
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = f.size*0.09;
+        ctx.globalAlpha = 0.7;
+        ctx.stroke();
+        ctx.restore();
+    }
+    // --- Eye ---
     ctx.beginPath();
     ctx.arc(f.size*0.32, -f.size*0.08, f.size*0.09, 0, Math.PI*2);
-    ctx.fillStyle = '#fff';
+    ctx.fillStyle = f.species.eye || '#fff';
     ctx.globalAlpha = 0.9;
     ctx.fill();
     ctx.beginPath();
@@ -207,7 +280,7 @@ function drawCaustics(ctx, width, height, t) {
 }
 
 function animate(ctx, t, width, height) {
-    // draw background first
+     // draw background first
     // Draw tank walls
     const wallW = 10;
     ctx.save();
@@ -224,6 +297,98 @@ function animate(ctx, t, width, height) {
     grad.addColorStop(1,'#0a2a3a');
     ctx.fillStyle = grad;
     ctx.fillRect(wallW,wallW,width-2*wallW,height-2*wallW);
+    // Rare random event: cartoon net on a pole swings in from the top
+    if (!netEvent && Math.random() < 1/30) {
+        // Net pivots from a point off the top of the screen
+        let pivotX = Math.random() * (width * 0.7) + width*0.15;
+        let pivotY = -height * 0.5 - 60;
+        // Always randomize pole length for each swing
+        let poleLenBase = height * 0.8;
+        let poleLen = poleLenBase * (Math.random()*1.5);
+        let netRadius = 60 + Math.random()*40;
+        let netAngleStart = 0;
+        let netAngleEnd = 180;
+        let swingDir = Math.random() < 0.5 ? 1 : -1;
+        netEvent = {
+            pivotX,
+            pivotY,
+            poleLen,
+            netRadius,
+            t: 0,
+            swingDir,
+            netAngleStart,
+            netAngleEnd,
+            scooped: false
+        };
+    }
+    if (netEvent) {
+        // Animate net swinging down
+        netEvent.t++;
+        let swingT = Math.min(1, netEvent.t / 10000);
+        let angle = netEvent.netAngleStart + (netEvent.netAngleEnd - netEvent.netAngleStart) * swingT * netEvent.swingDir;
+        // Net position at end of pole
+        let netX = netEvent.pivotX + Math.cos(angle) * netEvent.poleLen;
+        let netY = netEvent.pivotY + Math.sin(angle) * netEvent.poleLen;
+        // Draw pole
+        ctx.save();
+        ctx.globalAlpha = 0.8;
+        ctx.strokeStyle = '#a88';
+        ctx.lineWidth = 10;
+        ctx.beginPath();
+        ctx.moveTo(netEvent.pivotX, netEvent.pivotY);
+        ctx.lineTo(netX, netY);
+        ctx.stroke();
+        // Draw net hoop
+        ctx.save();
+        ctx.translate(netX, netY);
+        ctx.rotate(angle + Math.PI/2);
+        ctx.strokeStyle = '#b8b8b8';
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+    ctx.ellipse(0, 0, netEvent.netRadius, netEvent.netRadius*2, 0, 0, Math.PI*2);
+        ctx.stroke();
+        // Draw net mesh
+        ctx.setLineDash([8,8]);
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        for (let i = 0; i < 8; i++) {
+            let meshAngle = (Math.PI*2/8)*i;
+            ctx.moveTo(0, 0);
+            ctx.lineTo(Math.cos(meshAngle)*netEvent.netRadius, Math.sin(meshAngle)*netEvent.netRadius*0.85);
+        }
+        ctx.strokeStyle = '#b8b8b8';
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.restore();
+        ctx.restore();
+        // Remove fish if net passes through tank and hasn't scooped yet
+        if (!netEvent.scooped && swingT > 0.5) {
+            netEvent.scooped = true;
+            // Remove all fish inside net ellipse
+            let survivors = [];
+            for (let f of fish) {
+                // Transform fish position into net's local ellipse space
+                let dx = f.x - netX;
+                let dy = f.y - netY;
+                let localX = Math.cos(-angle - Math.PI/2)*dx - Math.sin(-angle - Math.PI/2)*dy;
+                let localY = Math.sin(-angle - Math.PI/2)*dx + Math.cos(-angle - Math.PI/2)*dy;
+                // Ellipse: (x/a)^2 + (y/b)^2 < 1
+                let a = netEvent.netRadius;
+                let b = netEvent.netRadius * 2;
+                let inNet = (localX*localX)/(a*a) + (localY*localY)/(b*b) < 1;
+                if (inNet) {
+                    continue;
+                }
+                survivors.push(f);
+            }
+            fish = survivors;
+        }
+        // End event after swing
+        if (swingT >= 1.0) {
+            netEvent = null;
+        }
+    }
+   
     // Draw tank floor decorations (static, cached)
     if (!tankDecor) {
         tankDecor = generateTankDecor(width, height, wallW);
@@ -330,6 +495,25 @@ function animate(ctx, t, width, height) {
         // Behavior timer
         f.behaviorTimer--;
         if (f.behaviorTimer <= 0) {
+            // Rare chance: lay eggs (unless 50 or more fish)
+            if (fish.length < 50 && Math.random() < 1/50) {
+                let numEggs = 2 + Math.floor(Math.random()*4);
+                for (let i = 0; i < numEggs; i++) {
+                    let angle = Math.random()*Math.PI*2;
+                    let dist = 10 + Math.random()*18;
+                    // Add a small outward velocity proportional to distance
+                    let spreadV = 0.12 + Math.random()*0.18;
+                    eggs.push({
+                        x: f.x + Math.cos(angle)*dist,
+                        y: f.y + Math.sin(angle)*dist,
+                        vx: Math.cos(angle)*(0.7 + spreadV*dist/18) + (Math.random()-0.5)*0.5,
+                        vy: Math.sin(angle)*(0.7 + spreadV*dist/18) + (Math.random()-0.5)*0.5,
+                        r: 4 + Math.random()*2,
+                        hatchTimer: 1000 + Math.random()*6000,
+                        species: f.species
+                    });
+                }
+            }
             // Pick a new behavior
             let behaviors = ['float','swim','explore','lookForFood'];
             let next = behaviors[Math.floor(Math.random()*behaviors.length)];
@@ -374,6 +558,48 @@ function animate(ctx, t, width, height) {
                 f.target = null;
             }
         }
+    // Draw and update eggs
+    for (let i = eggs.length - 1; i >= 0; i--) {
+        let egg = eggs[i];
+        // Draw egg
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(egg.x, egg.y, egg.r, 0, Math.PI*2);
+        ctx.fillStyle = egg.species ? egg.species.color() : '#fff';
+        ctx.globalAlpha = 0.7 + 0.3*Math.sin(t*0.2+egg.x*0.01);
+        ctx.shadowColor = '#fff';
+        ctx.shadowBlur = 8;
+        ctx.fill();
+        ctx.restore();
+        // Animate egg
+        egg.x += egg.vx;
+        egg.y += egg.vy;
+        egg.vx *= 0.96;
+        egg.vy *= 0.96;
+        // Gravity (sink to bottom)
+        const wallW = 10;
+        const bottom = height - wallW - egg.r;
+        if (egg.y > bottom) { egg.y = bottom; egg.vy *= -0.3; }
+        // Hatch timer
+        egg.hatchTimer--;
+        if (egg.hatchTimer <= 0) {
+            // Hatch: add new fish of same species
+            fish.push({
+                x: egg.x,
+                y: egg.y,
+                vx: (Math.random()*0.5+0.3) * (Math.random()<0.5?-1:1),
+                vy: (Math.random()-0.5)*0.2,
+                size: 18+Math.random()*18,
+                color: egg.species.color(),
+                flip: Math.random()<0.5,
+                behavior: 'float',
+                behaviorTimer: 60 + Math.random()*120,
+                target: null,
+                species: egg.species
+            });
+            eggs.splice(i,1);
+        }
+    }
         // Behavior logic
         let vx = f.vx, vy = f.vy;
         if (f.behavior === 'float') {
