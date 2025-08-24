@@ -1,5 +1,5 @@
-import { plasma1 } from './shaders/plasma1.js';
-import { plasma2 } from './shaders/plasma2.js';
+import plasma1 from './shaders/plasma1.js';
+import plasma2 from './shaders/plasma2.js';
 import gridPsychedelicCirclesShader from './shaders/gridPsychedelicCirclesShader.js';
 import gridGlyphShader from './shaders/gridGlyphShader.js';
 import gridGlyphShader2 from './shaders/gridGlyphShader2.js';
@@ -196,7 +196,6 @@ resizeCanvas();
 const select = document.getElementById('shader-select');
 const shaders = [
 	{shader: plasma1, displayName: 'Demo Scene 1'},
-	{shader: fishTankShader, displayName: 'Fish Tank'},
    {shader: plasma2, displayName: 'Demo Scene 2'},
    {shader: cubesShader, displayName: 'Cubes'},
    {shader: cubes2Shader, displayName: 'Cubes 2'},
