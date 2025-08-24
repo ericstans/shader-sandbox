@@ -371,6 +371,12 @@ function randomBaseGlyph(width, height, leftNeighborType = null) {
     if (typeof window !== 'undefined' && window.currentGlyphStyle === 'hebrew') {
         return { glyph: glyphGenerators.randomHebrewGlyph(width, height, leftNeighborType), lastStrokeType: 'hebrew' };
     }
+    if (typeof window !== 'undefined' && window.currentGlyphStyle === 'latin-cursive') {
+        return { glyph: glyphGenerators.randomLatinCursiveGlyph(width, height, leftNeighborType), lastStrokeType: 'latin-cursive' };
+    }
+    if (typeof window !== 'undefined' && window.currentGlyphStyle === 'greek') {
+        return { glyph: glyphGenerators.randomGreekGlyph(width, height, leftNeighborType), lastStrokeType: 'greek' };
+    }
     // Style switch: Arabic
     if (typeof window !== 'undefined' && window.currentGlyphStyle === 'arabic') {
         // Always return {glyph, lastStrokeType} for compatibility

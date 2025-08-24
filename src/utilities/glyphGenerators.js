@@ -11,8 +11,8 @@ export function randomHebrewGlyph(width, height, leftNeighborType = null) {
     let usedLigature = false;
     for (let s = 0; s < nStrokes; s++) {
         let type = Math.random();
-        // Randomize stroke thickness for each stroke
-        let thick = 1 + Math.floor(Math.random()*2); // 1 or 2
+    // Randomize stroke thickness for each stroke
+    let thick = 1; // Max thickness now 1
         if (!usedTopBar && type < 0.4) {
             // Strong top horizontal bar
             let y = Math.floor(h*0.18 + Math.random()*h*0.08);
@@ -139,12 +139,12 @@ export function randomJapaneseGlyph(width, height, leftNeighborType = null) {
     const w = width, h = height;
     // 2-14 main strokes: horizontal, vertical, diagonal, hook, dot, with expressive endings
     let nStrokes = 2 + Math.floor(Math.random()*13);
-    const MIN_THICKNESS = 0;
-    const MAX_THICKNESS = 1;
+    // Use global thickness for all glyphs
+    let thickness = (typeof window !== 'undefined' && window.japaneseGlyphThickness !== undefined)
+        ? window.japaneseGlyphThickness
+        : 1;
     for (let s = 0; s < nStrokes; s++) {
         let type = Math.random();
-        let thickness = 2 + Math.floor(Math.random()*2);
-        thickness = Math.max(MIN_THICKNESS, Math.min(MAX_THICKNESS, thickness));
         let harai = Math.random() < 0.5; // sweeping ending
         let hane = !harai && Math.random() < 0.5; // upward flick
         if (type < 0.2) {
@@ -253,12 +253,13 @@ export function randomChineseGlyph(width, height, leftNeighborType = null) {
     const w = width, h = height;
     // 2-16 main strokes: horizontal, vertical, diagonal, hook, dot
     let nStrokes = 2 + Math.floor(Math.random()*15);
-    const MIN_THICKNESS = 1;
-    const MAX_THICKNESS = 2;
+    // Use global thickness for all glyphs
+    let thickness = (typeof window !== 'undefined' && window.chineseGlyphThickness !== undefined)
+        ? window.chineseGlyphThickness
+        : 1;
     for (let s = 0; s < nStrokes; s++) {
         let type = Math.random();
-        let thickness = 2 + Math.floor(Math.random()*3);
-        thickness = Math.max(MIN_THICKNESS, Math.min(MAX_THICKNESS, thickness));
+
         if (type < 0.25) {
             // Horizontal stroke, more likely to terminate on collision
             let y = Math.floor(h*0.2) + Math.floor(Math.random()*(h*0.6));
@@ -345,7 +346,7 @@ export function randomDevanagariGlyph(width, height, leftNeighborType = null) {
         let baseX = Math.floor(w*0.2) + Math.floor(Math.random()*(w*0.6));
         let baseY = headY + 2 + Math.floor(Math.random()*3);
         let len = Math.floor(h*0.45 + Math.random()*h*0.22);
-        let thickness = 2 + Math.floor(Math.random()*2);
+    let thickness = 1;
         if (type < 0.4) {
             // Vertical stroke
             for (let y = baseY; y < Math.min(h-2, baseY+len); y++) {
@@ -371,15 +372,36 @@ export function randomDevanagariGlyph(width, height, leftNeighborType = null) {
             let cx = baseX, cy = baseY + r;
             let startA = Math.PI*0.7 + Math.random()*0.4;
             let endA = Math.PI*2.1 + Math.random()*0.4;
-            let steps = Math.max(8, Math.floor(r*2.5));
+            let steps = Math.max(18, Math.floor(r*4.5));
+            let prevX = null, prevY = null;
             for (let i = 0; i < steps; i++) {
                 let a = startA + (endA-startA)*i/(steps-1);
                 let x = Math.round(cx + r*Math.cos(a));
                 let y = Math.round(cy + r*Math.sin(a));
-                for (let t = -thickness; t <= thickness; t++) {
-                    let xx = x + t;
-                    if (xx >= 0 && xx < w && y >= 0 && y < h) glyph[y][xx] = 1;
+                if (prevX !== null && prevY !== null) {
+                    // Bresenham's line algorithm to fill between previous and current point
+                    let dx = Math.abs(x - prevX), sx = prevX < x ? 1 : -1;
+                    let dy = -Math.abs(y - prevY), sy = prevY < y ? 1 : -1;
+                    let err = dx + dy, e2;
+                    let px = prevX, py = prevY;
+                    while (true) {
+                        for (let t = -thickness; t <= thickness; t++) {
+                            let xx = px + t;
+                            if (xx >= 0 && xx < w && py >= 0 && py < h) glyph[py][xx] = 1;
+                        }
+                        if (px === x && py === y) break;
+                        e2 = 2 * err;
+                        if (e2 >= dy) { err += dy; px += sx; }
+                        if (e2 <= dx) { err += dx; py += sy; }
+                    }
+                } else {
+                    for (let t = -thickness; t <= thickness; t++) {
+                        let xx = x + t;
+                        if (xx >= 0 && xx < w && y >= 0 && y < h) glyph[y][xx] = 1;
+                    }
                 }
+                prevX = x;
+                prevY = y;
             }
         }
     }
@@ -450,6 +472,274 @@ export function randomArabicGlyph(width, height, leftNeighborType = null) {
     }
     return glyph;
 }
+// Latin Cursive-inspired glyph generator
+export function randomLatinCursiveGlyph(width, height, leftNeighborType = null) {
+    // Latin Cursive: flowing, connected, slanted, loops, ascenders/descenders, variable thickness
+    const glyph = emptyGlyph(width, height);
+    const w = width, h = height;
+    // 2-5 main strokes: curves, loops, connectors, dots
+    let nStrokes = 2 + Math.floor(Math.random()*4);
+    let baseline = Math.floor(h*0.7 + Math.random()*h*0.1 - h*0.05);
+    let slant = Math.random()*0.4 + 0.2; // rightward slant
+    for (let s = 0; s < nStrokes; s++) {
+        let type = Math.random();
+    let thick = 1;
+        if (type < 0.25) {
+            // Main curve (like a, c, e, o) with Bresenham's line algorithm
+            let cx = Math.floor(w*0.5), cy = baseline;
+            let rx = Math.floor(w*0.28 + Math.random()*w*0.12);
+            let ry = Math.floor(h*0.18 + Math.random()*h*0.08);
+            let startA = Math.PI*0.9 + Math.random()*0.2;
+            let endA = Math.PI*2.1 + Math.random()*0.2;
+            let steps = Math.max(8, Math.floor(rx*1.5));
+            let prevX = null, prevY = null;
+            for (let i = 0; i < steps; i++) {
+                let a = startA + (endA-startA)*i/(steps-1);
+                let x = Math.round(cx + rx*Math.cos(a) + (cy-baseline)*slant);
+                let y = Math.round(cy + ry*Math.sin(a));
+                if (prevX !== null && prevY !== null) {
+                    // Bresenham's line algorithm to fill between previous and current point
+                    let dx = Math.abs(x - prevX), sx = prevX < x ? 1 : -1;
+                    let dy = -Math.abs(y - prevY), sy = prevY < y ? 1 : -1;
+                    let err = dx + dy, e2;
+                    let px = prevX, py = prevY;
+                    while (true) {
+                        for (let t = -thick; t <= thick; t++) {
+                            let xx = px + t;
+                            if (xx >= 0 && xx < w && py >= 0 && py < h) glyph[py][xx] = 1;
+                        }
+                        if (px === x && py === y) break;
+                        e2 = 2 * err;
+                        if (e2 >= dy) { err += dy; px += sx; }
+                        if (e2 <= dx) { err += dx; py += sy; }
+                    }
+                } else {
+                    for (let t = -thick; t <= thick; t++) {
+                        let xx = x + t;
+                        if (xx >= 0 && xx < w && y >= 0 && y < h) glyph[y][xx] = 1;
+                    }
+                }
+                prevX = x;
+                prevY = y;
+            }
+        } else if (type < 0.5) {
+            // Ascender/descender (like b, d, f, g, j, p, q, y)
+            let up = Math.random() < 0.5;
+            let x = Math.floor(w*0.5 + (Math.random()-0.5)*w*0.2);
+            let yStart = up ? baseline - Math.floor(h*0.3 + Math.random()*h*0.18) : baseline;
+            let yEnd = up ? baseline : baseline + Math.floor(h*0.3 + Math.random()*h*0.18);
+            let terminated = false;
+            for (let y = yStart; y < yEnd && !terminated; y++) {
+                let xx = x + Math.round((y-baseline)*slant);
+                for (let t = -thick; t <= thick; t++) {
+                    let px = xx + t;
+                    if (px >= 0 && px < w && y >= 0 && y < h) {
+                        if (glyph[y][px] && Math.random() < 0.5) { terminated = true; break; }
+                        glyph[y][px] = 1;
+                    }
+                }
+            }
+        } else if (type < 0.7) {
+            // Loop (like l, e, f, g) with Bresenham's line algorithm
+            let cx = Math.floor(w*0.5 + (Math.random()-0.5)*w*0.2);
+            let cy = baseline - Math.floor(h*0.18 + Math.random()*h*0.12);
+            let r = Math.floor(Math.min(w,h)*0.18 + Math.random()*Math.min(w,h)*0.08);
+            let startA = Math.PI*0.7 + Math.random()*0.2;
+            let endA = Math.PI*2.3 + Math.random()*0.2;
+            let steps = Math.max(8, Math.floor(r*1.5));
+            let prevX = null, prevY = null;
+            for (let i = 0; i < steps; i++) {
+                let a = startA + (endA-startA)*i/(steps-1);
+                let x = Math.round(cx + r*Math.cos(a) + (cy-baseline)*slant);
+                let y = Math.round(cy + r*Math.sin(a));
+                if (prevX !== null && prevY !== null) {
+                    // Bresenham's line algorithm to fill between previous and current point
+                    let dx = Math.abs(x - prevX), sx = prevX < x ? 1 : -1;
+                    let dy = -Math.abs(y - prevY), sy = prevY < y ? 1 : -1;
+                    let err = dx + dy, e2;
+                    let px = prevX, py = prevY;
+                    while (true) {
+                        for (let t = -thick; t <= thick; t++) {
+                            let xx = px + t;
+                            if (xx >= 0 && xx < w && py >= 0 && py < h) glyph[py][xx] = 1;
+                        }
+                        if (px === x && py === y) break;
+                        e2 = 2 * err;
+                        if (e2 >= dy) { err += dy; px += sx; }
+                        if (e2 <= dx) { err += dx; py += sy; }
+                    }
+                } else {
+                    for (let t = -thick; t <= thick; t++) {
+                        let xx = x + t;
+                        if (xx >= 0 && xx < w && y >= 0 && y < h) glyph[y][xx] = 1;
+                    }
+                }
+                prevX = x;
+                prevY = y;
+            }
+        } else if (type < 0.85) {
+            // Connector (slanted line, like joining letters)
+            let x0 = Math.floor(w*0.1 + Math.random()*w*0.2);
+            let y0 = baseline - Math.floor(h*0.08 + Math.random()*h*0.08);
+            let x1 = Math.floor(w*0.7 + Math.random()*w*0.2);
+            let y1 = baseline + Math.floor(h*0.08 + Math.random()*h*0.08);
+            let steps = Math.max(4, Math.abs(x1-x0));
+            let terminated = false;
+            for (let i = 0; i <= steps && !terminated; i++) {
+                let x = Math.round(x0 + (x1-x0)*i/steps);
+                let y = Math.round(y0 + (y1-y0)*i/steps);
+                for (let t = -thick; t <= thick; t++) {
+                    let px = x + t;
+                    if (px >= 0 && px < w && y >= 0 && y < h) {
+                        if (glyph[y][px] && Math.random() < 0.5) { terminated = true; break; }
+                        glyph[y][px] = 1;
+                    }
+                }
+            }
+        } else {
+            // Dot (like i, j)
+            let cx = Math.floor(w*0.5 + (Math.random()-0.5)*w*0.3);
+            let cy = baseline - Math.floor(h*0.28 + Math.random()*h*0.12);
+            for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+                let dist = Math.sqrt(dx*dx + dy*dy);
+                if (dist <= 1.2) {
+                    let px = cx+dx, py = cy+dy;
+                    if (px >= 0 && px < w && py >= 0 && py < h) glyph[py][px] = 1;
+                }
+            }
+        }
+    }
+    return glyph;
+}
+// Greek-inspired glyph generator
+export function randomGreekGlyph(width, height, leftNeighborType = null) {
+    // Greek: horizontal/vertical bars, diagonals, open bowls, crossbars, and some unique forms
+    const glyph = emptyGlyph(width, height);
+    const w = width, h = height;
+    let nStrokes = 2 + Math.floor(Math.random()*2); // 2-3 main strokes
+    let usedCrossbar = false;
+    let usedDiagonal = false;
+    let usedBowl = false;
+    let usedVertical = false;
+    let usedHorizontal = false;
+    for (let s = 0; s < nStrokes; s++) {
+        let type = Math.random();
+        let thick = 1; // Keep line weight thin for consistency
+        if (!usedHorizontal && type < 0.25) {
+            // Horizontal bar (like in Pi, Sigma, Epsilon)
+            let y = Math.floor(h*0.2 + Math.random()*h*0.6);
+            let xStart = Math.floor(w*0.15);
+            let xEnd = w - Math.floor(w*0.15);
+            for (let x = xStart; x < xEnd; x++) {
+                for (let t = -thick; t <= thick; t++) {
+                    let yy = y + t;
+                    if (yy >= 0 && yy < h) glyph[yy][x] = 1;
+                }
+            }
+            usedHorizontal = true;
+        } else if (!usedVertical && type < 0.45) {
+            // Vertical bar (like in Eta, Pi, Lambda)
+            let x = Math.floor(w*0.2 + Math.random()*w*0.6);
+            let yStart = Math.floor(h*0.15);
+            let yEnd = h - Math.floor(h*0.15);
+            for (let y = yStart; y < yEnd; y++) {
+                for (let t = -thick; t <= thick; t++) {
+                    let xx = x + t;
+                    if (xx >= 0 && xx < w) glyph[y][xx] = 1;
+                }
+            }
+            usedVertical = true;
+        } else if (!usedDiagonal && type < 0.7) {
+            // Diagonal (like in Lambda, Chi, Psi) using Bresenham's line algorithm
+            let left = Math.random() < 0.5;
+            let x0 = left ? Math.floor(w*0.15) : w - Math.floor(w*0.15);
+            let y0 = Math.floor(h*0.15);
+            let x1 = left ? w - Math.floor(w*0.15) : Math.floor(w*0.15);
+            let y1 = h - Math.floor(h*0.15);
+            // Bresenham's line algorithm
+            let dx = Math.abs(x1 - x0), sx = x0 < x1 ? 1 : -1;
+            let dy = -Math.abs(y1 - y0), sy = y0 < y1 ? 1 : -1;
+            let err = dx + dy, e2;
+            let xx = x0, yy = y0;
+            while (true) {
+                for (let t = -thick; t <= thick; t++) {
+                    let px = xx + t;
+                    if (px >= 0 && px < w && yy >= 0 && yy < h) glyph[yy][px] = 1;
+                }
+                if (xx === x1 && yy === y1) break;
+                e2 = 2 * err;
+                if (e2 >= dy) { err += dy; xx += sx; }
+                if (e2 <= dx) { err += dx; yy += sy; }
+            }
+            usedDiagonal = true;
+        } else if (!usedBowl && type < 0.9) {
+            // Open bowl (like in Omega, Sigma, Theta)
+            let cx = Math.floor(w*0.5);
+            let cy = Math.floor(h*0.6);
+            let rx = Math.floor(w*0.28 + Math.random()*w*0.12);
+            let ry = Math.floor(h*0.18 + Math.random()*h*0.08);
+            let startA = Math.PI*0.2 + Math.random()*0.2;
+            let endA = Math.PI*1.8 + Math.random()*0.2;
+            let steps = Math.max(10, Math.floor(rx*1.5));
+            let prevX = null, prevY = null;
+            for (let i = 0; i < steps; i++) {
+                let a = startA + (endA-startA)*i/(steps-1);
+                let x = Math.round(cx + rx*Math.cos(a));
+                let y = Math.round(cy + ry*Math.sin(a));
+                if (prevX !== null && prevY !== null) {
+                    // Connect points for smoothness
+                    let dx = Math.abs(x - prevX), sx = prevX < x ? 1 : -1;
+                    let dy = -Math.abs(y - prevY), sy = prevY < y ? 1 : -1;
+                    let err = dx + dy, e2;
+                    let px = prevX, py = prevY;
+                    while (true) {
+                        for (let t = -thick; t <= thick; t++) {
+                            let xx = px + t;
+                            if (xx >= 0 && xx < w && py >= 0 && py < h) glyph[py][xx] = 1;
+                        }
+                        if (px === x && py === y) break;
+                        e2 = 2 * err;
+                        if (e2 >= dy) { err += dy; px += sx; }
+                        if (e2 <= dx) { err += dx; py += sy; }
+                    }
+                } else {
+                    for (let t = -thick; t <= thick; t++) {
+                        let xx = x + t;
+                        if (xx >= 0 && xx < w && y >= 0 && y < h) glyph[y][xx] = 1;
+                    }
+                }
+                prevX = x;
+                prevY = y;
+            }
+            usedBowl = true;
+        } else if (!usedCrossbar) {
+            // Crossbar (like in Theta, Pi, Xi)
+            let y = Math.floor(h*0.5 + Math.random()*h*0.1 - h*0.05);
+            let xStart = Math.floor(w*0.25);
+            let xEnd = w - Math.floor(w*0.25);
+            for (let x = xStart; x < xEnd; x++) {
+                for (let t = -thick; t <= thick; t++) {
+                    let yy = y + t;
+                    if (yy >= 0 && yy < h) glyph[yy][x] = 1;
+                }
+            }
+            usedCrossbar = true;
+        }
+    }
+    // Occasionally add a dot (like iota subscript or diacritic)
+    if (Math.random() < 0.3) {
+        let cx = Math.floor(w*0.5 + (Math.random()-0.5)*w*0.3);
+        let cy = Math.floor(h*0.15 + Math.random()*h*0.2);
+        for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+            let dist = Math.sqrt(dx*dx + dy*dy);
+            if (dist <= 1.2) {
+                let px = cx+dx, py = cy+dy;
+                if (px >= 0 && px < w && py >= 0 && py < h) glyph[py][px] = 1;
+            }
+        }
+    }
+    return glyph;
+}
 // gridGlyphShader4.js
 // Shader: Randomly generated glyphs tiled to fill the screen
 
@@ -457,4 +747,12 @@ export function randomArabicGlyph(width, height, leftNeighborType = null) {
 // Stroke-based glyph generation
 export function emptyGlyph(width, height) {
     return Array.from({length: height}, () => Array(width).fill(0));
+}
+
+// Utility to randomize and set global thickness for Japanese and Chinese glyphs
+export function randomizeGlyphLineWeights() {
+    if (typeof window !== 'undefined') {
+        window.japaneseGlyphThickness = 1 + Math.floor(Math.random()*2); // 1 or 2
+        window.chineseGlyphThickness = 1 + Math.floor(Math.random()*2); // 1 or 2
+    }
 }

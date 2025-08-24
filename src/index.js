@@ -1,4 +1,3 @@
-
 import { plasma1 } from './shaders/plasma1.js';
 import { plasma2 } from './shaders/plasma2.js';
 import gridPsychedelicCirclesShader from './shaders/gridPsychedelicCirclesShader.js';
@@ -46,6 +45,7 @@ import { theWave4Shader } from './shaders/theWave4Shader.js';
 import { auroraShader } from './shaders/auroraShader.js';
 import { mandelbrotShader } from './shaders/mandelbrotShader.js';
 import { digitalRainShader } from './shaders/digitalRainShader.js';
+import { randomizeGlyphLineWeights } from './utilities/glyphGenerators.js';
 
 // Glyph Generation Style dropdown
 const glyphStyleSelect = document.getElementById('glyph-style-select');
@@ -76,7 +76,10 @@ if (glyphStyleSelect) {
 		if (typeof window.resetGlyphs === 'function') {
 			// Use the current canvas size
 			const canvas = document.getElementById('plasma-canvas');
-			if (canvas) window.resetGlyphs(canvas.width, canvas.height);
+			if (canvas) {
+				randomizeGlyphLineWeights();
+				window.resetGlyphs(canvas.width, canvas.height);
+			}
 		}
 	});
 // Expose resetGlyphs globally so the picklist can trigger it
@@ -256,4 +259,3 @@ function render(time) {
 	requestAnimationFrame(render);
 }
 requestAnimationFrame(render);
-// ...existing code...
