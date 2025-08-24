@@ -1,205 +1,4 @@
-// Chinese-inspired glyph generator
-function randomChineseGlyph(width, height, leftNeighborType = null) {
-    // Chinese: dynamic brushwork, thick/thin, dots, hooks, sweeping curves, grid-based structure
-    const glyph = emptyGlyph(width, height);
-    const w = width, h = height;
-    // 2-4 main strokes: horizontal, vertical, diagonal, hook, dot
-    let nStrokes = 2 + Math.floor(Math.random()*3);
-    for (let s = 0; s < nStrokes; s++) {
-        let type = Math.random();
-        let thickness = 2 + Math.floor(Math.random()*3);
-        if (type < 0.25) {
-            // Horizontal stroke
-            let y = Math.floor(h*0.2) + Math.floor(Math.random()*(h*0.6));
-            for (let x = Math.floor(w*0.1); x < w-Math.floor(w*0.1); x++) {
-                for (let t = -thickness; t <= thickness; t++) {
-                    let yy = y + t;
-                    if (yy >= 0 && yy < h) glyph[yy][x] = 1;
-                }
-            }
-        } else if (type < 0.5) {
-            // Vertical stroke
-            let x = Math.floor(w*0.2) + Math.floor(Math.random()*(w*0.6));
-            for (let y = Math.floor(h*0.1); y < h-Math.floor(h*0.1); y++) {
-                for (let t = -thickness; t <= thickness; t++) {
-                    let xx = x + t;
-                    if (xx >= 0 && xx < w) glyph[y][xx] = 1;
-                }
-            }
-        } else if (type < 0.7) {
-            // Diagonal stroke
-            let dir = Math.random() < 0.5 ? 1 : -1;
-            let x0 = Math.floor(w*0.2), y0 = Math.floor(h*0.2);
-            let len = Math.floor(Math.min(w, h)*0.6);
-            for (let i = 0; i < len; i++) {
-                let x = x0 + i*dir;
-                let y = y0 + i;
-                for (let t = -thickness; t <= thickness; t++) {
-                    let xx = x + t*dir, yy = y + t;
-                    if (xx >= 0 && xx < w && yy >= 0 && yy < h) glyph[yy][xx] = 1;
-                }
-            }
-        } else if (type < 0.85) {
-            // Hook stroke (like a J)
-            let x = Math.floor(w*0.2) + Math.floor(Math.random()*(w*0.6));
-            let y = Math.floor(h*0.6) + Math.floor(Math.random()*(h*0.2));
-            let len = Math.floor(h*0.18 + Math.random()*h*0.12);
-            for (let i = 0; i < len; i++) {
-                let yy = y + i;
-                let xx = x + Math.round(Math.sin(i/len*Math.PI)*len*0.4);
-                for (let t = -thickness; t <= thickness; t++) {
-                    let xxx = xx + t;
-                    if (xxx >= 0 && xxx < w && yy >= 0 && yy < h) glyph[yy][xxx] = 1;
-                }
-            }
-        } else {
-            // Dot stroke
-            let cx = Math.floor(w*0.2) + Math.floor(Math.random()*(w*0.6));
-            let cy = Math.floor(h*0.2) + Math.floor(Math.random()*(h*0.6));
-            for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) {
-                let dist = Math.sqrt(dx*dx + dy*dy);
-                if (dist <= 2.2) {
-                    let px = cx+dx, py = cy+dy;
-                    if (px >= 0 && px < w && py >= 0 && py < h) glyph[py][px] = 1;
-                }
-            }
-        }
-    }
-    return glyph;
-}
-// Devanagari-inspired glyph generator
-function randomDevanagariGlyph(width, height, leftNeighborType = null) {
-    // Devanagari: horizontal shirorekha (headline), vertical/diagonal strokes, rounded forms, stacked ligatures
-    const glyph = emptyGlyph(width, height);
-    const w = width, h = height;
-    // Draw shirorekha (headline) at the top
-    let headY = Math.floor(h * (0.18 + Math.random()*0.06));
-    for (let x = Math.floor(w*0.08); x < w-Math.floor(w*0.08); x++) {
-        for (let t = -1; t <= 1; t++) {
-            let y = headY + t;
-            if (y >= 0 && y < h) glyph[y][x] = 1;
-        }
-    }
-    // 1-3 main vertical/diagonal/rounded strokes below the headline
-    let nStrokes = 1 + Math.floor(Math.random()*3);
-    for (let s = 0; s < nStrokes; s++) {
-        let type = Math.random();
-        let baseX = Math.floor(w*0.2) + Math.floor(Math.random()*(w*0.6));
-        let baseY = headY + 2 + Math.floor(Math.random()*3);
-        let len = Math.floor(h*0.45 + Math.random()*h*0.22);
-        let thickness = 2 + Math.floor(Math.random()*2);
-        if (type < 0.4) {
-            // Vertical stroke
-            for (let y = baseY; y < Math.min(h-2, baseY+len); y++) {
-                for (let t = -thickness; t <= thickness; t++) {
-                    let x = baseX + t;
-                    if (x >= 0 && x < w) glyph[y][x] = 1;
-                }
-            }
-        } else if (type < 0.7) {
-            // Diagonal stroke
-            let dir = Math.random() < 0.5 ? 1 : -1;
-            for (let i = 0; i < len; i++) {
-                let x = baseX + Math.round(i*0.4*dir);
-                let y = baseY + i;
-                for (let t = -thickness; t <= thickness; t++) {
-                    let xx = x + t;
-                    if (xx >= 0 && xx < w && y < h) glyph[y][xx] = 1;
-                }
-            }
-        } else {
-            // Rounded/loop stroke (like a hook or ligature)
-            let r = Math.floor(len*0.5);
-            let cx = baseX, cy = baseY + r;
-            let startA = Math.PI*0.7 + Math.random()*0.4;
-            let endA = Math.PI*2.1 + Math.random()*0.4;
-            let steps = Math.max(8, Math.floor(r*2.5));
-            for (let i = 0; i < steps; i++) {
-                let a = startA + (endA-startA)*i/(steps-1);
-                let x = Math.round(cx + r*Math.cos(a));
-                let y = Math.round(cy + r*Math.sin(a));
-                for (let t = -thickness; t <= thickness; t++) {
-                    let xx = x + t;
-                    if (xx >= 0 && xx < w && y >= 0 && y < h) glyph[y][xx] = 1;
-                }
-            }
-        }
-    }
-    // Optionally add a small dot/diacritic above or below
-    if (Math.random() < 0.5) {
-        let dotX = Math.floor(w*0.3) + Math.floor(Math.random()*(w*0.4));
-        let above = Math.random() < 0.5;
-        let dotY = above ? headY - 2 : h - 3;
-        for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
-            let px = dotX+dx, py = dotY+dy;
-            if (px >= 1 && px < w-1 && py >= 1 && py < h-1) glyph[py][px] = 1;
-        }
-    }
-    return glyph;
-}
-// Arabic-inspired glyph generator
-function randomArabicGlyph(width, height, leftNeighborType = null) {
-    // Arabic: flowing, looping, interlaced, strong thick/thin contrast, dots/diacritics
-    const glyph = emptyGlyph(width, height);
-    const w = width, h = height;
-    // Main baseline: horizontal, slightly below center
-    let baseY = Math.floor(h * (0.65 + (Math.random()-0.5)*0.08));
-    let nStrokes = 1 + Math.floor(Math.random()*2); // 1 or 2 main strokes
-    for (let s = 0; s < nStrokes; s++) {
-        // Each stroke: a sinuous, rightward curve (Arabic is right-to-left, but for visual effect, curve right)
-        let startX = Math.floor(w*0.15) + Math.floor(Math.random()*2);
-        let endX = w - Math.floor(w*0.15) - Math.floor(Math.random()*2);
-        let amp = (h/4) * (0.7 + Math.random()*0.6); // amplitude
-        let freq = 1.2 + Math.random()*0.7;
-        let thicknessBase = 2.5 + Math.random()*2.5;
-        for (let x = startX; x < endX; x++) {
-            let t = (x-startX)/(endX-startX);
-            let y = baseY + Math.sin(t*Math.PI*freq + s*0.7) * amp * (0.7 + Math.sin(t*Math.PI)*0.3);
-            // Simulate thick/thin: pressure varies with curve
-            let thick = thicknessBase + Math.sin(t*Math.PI*freq + 0.5)*2.5;
-            let angle = Math.atan2(
-                Math.cos(t*Math.PI*freq + s*0.7) * amp * freq * Math.PI / (endX-startX),
-                1
-            );
-            // Add calligraphic dot (ellipse) at each point
-            for (let d = 0; d < 2; d++) {
-                let jitterX = x + (Math.random()-0.5)*0.7;
-                let jitterY = y + (Math.random()-0.5)*0.7;
-                let tthick = thick * (0.8 + Math.random()*0.4);
-                let tangle = angle + (Math.random()-0.5)*0.3;
-                for (let dy = -Math.floor(tthick/2); dy <= Math.floor(tthick/2); dy++) {
-                    for (let dx = -Math.floor(tthick/1.5); dx <= Math.floor(tthick/1.5); dx++) {
-                        let px = Math.round(jitterX + dx*Math.cos(tangle) - dy*Math.sin(tangle));
-                        let py = Math.round(jitterY + dx*Math.sin(tangle) + dy*Math.cos(tangle));
-                        if (px >= 1 && px < w-1 && py >= 1 && py < h-1) {
-                            glyph[py][px] = 1;
-                        }
-                    }
-                }
-            }
-        }
-    }
-    // Add 0-2 diacritic dots above or below
-    let nDots = Math.random() < 0.5 ? 0 : (1 + Math.floor(Math.random()*2));
-    for (let d = 0; d < nDots; d++) {
-        let dotX = Math.floor(w*0.3) + Math.floor(Math.random()*(w*0.4));
-        let above = Math.random() < 0.5;
-        let dotY = baseY + (above ? -Math.floor(h*0.22) : Math.floor(h*0.22)) + Math.floor((Math.random()-0.5)*2);
-        for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
-            let px = dotX+dx, py = dotY+dy;
-            if (px >= 1 && px < w-1 && py >= 1 && py < h-1) glyph[py][px] = 1;
-        }
-    }
-    return glyph;
-}
-// gridGlyphShader4.js
-// Shader: Randomly generated glyphs tiled to fill the screen
-
-
-// Stroke-based glyph generation
-function emptyGlyph(width, height) {
-    return Array.from({length: height}, () => Array(width).fill(0));
-}
+import  * as glyphGenerators from '../utilities/glyphGenerators.js';
 
 function drawStroke(glyph, type) {
     // Padding logic for all strokes
@@ -563,18 +362,21 @@ function drawStroke(glyph, type) {
 
 // Contextual influence: leftNeighborType biases first stroke
 function randomBaseGlyph(width, height, leftNeighborType = null) {
+    if (typeof window !== 'undefined' && window.currentGlyphStyle === 'japanese') {
+        return { glyph: glyphGenerators.randomJapaneseGlyph(width, height, leftNeighborType), lastStrokeType: 'japanese' };
+    }
     if (typeof window !== 'undefined' && window.currentGlyphStyle === 'chinese') {
-        return { glyph: randomChineseGlyph(width, height, leftNeighborType), lastStrokeType: 'chinese' };
+        return { glyph: glyphGenerators.randomChineseGlyph(width, height, leftNeighborType), lastStrokeType: 'chinese' };
     }
     // Style switch: Arabic
     if (typeof window !== 'undefined' && window.currentGlyphStyle === 'arabic') {
         // Always return {glyph, lastStrokeType} for compatibility
-        return { glyph: randomArabicGlyph(width, height, leftNeighborType), lastStrokeType: 'arabic' };
+        return { glyph: glyphGenerators.randomArabicGlyph(width, height, leftNeighborType), lastStrokeType: 'arabic' };
     }
     if (typeof window !== 'undefined' && window.currentGlyphStyle === 'devanagari') {
-        return { glyph: randomDevanagariGlyph(width, height, leftNeighborType), lastStrokeType: 'devanagari' };
+        return { glyph: glyphGenerators.randomDevanagariGlyph(width, height, leftNeighborType), lastStrokeType: 'devanagari' };
     }
-    const glyph = emptyGlyph(width, height);
+    const glyph = glyphGenerators.emptyGlyph(width, height);
     // 2-4 strokes, always connected/overlapping, centered
     const strokes = [
         'vert','horiz','diag1','diag2','dot',
@@ -633,7 +435,7 @@ function randomBaseGlyph(width, height, leftNeighborType = null) {
         clusterDy = Math.floor((Math.random()-0.5)*height*0.3);
     }
     for (let i=0; i<chosen.length; i++) {
-        let temp = emptyGlyph(width, height);
+        let temp = glyphGenerators.emptyGlyph(width, height);
         // If clustering, offset some strokes
         if (cluster && i > 0) {
             let origDrawStroke = drawStroke;
@@ -690,7 +492,12 @@ function resetGlyphs(width, height) {
     // Randomize glyph height
     glyphH = 40 + Math.floor(Math.random() * 41); // 40-80
 
-    // Estimate max glyph width for grid calculation
+    // For Chinese/Japanese styles, use fixed glyph width for all glyphs in the grid
+    let isCJK = false;
+    if (typeof window !== 'undefined' && (window.currentGlyphStyle === 'chinese' || window.currentGlyphStyle === 'japanese')) {
+        isCJK = true;
+    }
+    let fixedGlyphW = glyphH;
     let maxGlyphW = glyphH;
     let minGlyphW = 10;
     let space = 6;
@@ -705,8 +512,8 @@ function resetGlyphs(width, height) {
     for (let row = 0; row < rows; row++) {
         lastStrokeGrid[row] = [];
         for (let col = 0; col < cols; col++) {
-            // Randomize width for each glyph
-            let glyphW = minGlyphW + Math.floor(Math.random() * (glyphH - minGlyphW + 1));
+            // For CJK, use fixed width; otherwise, randomize width
+            let glyphW = isCJK ? fixedGlyphW : (minGlyphW + Math.floor(Math.random() * (glyphH - minGlyphW + 1)));
             let leftType = col > 0 ? lastStrokeGrid[row][col-1] : null;
             let {glyph, lastStrokeType} = randomBaseGlyph(glyphW, glyphH, leftType);
             glyphs.push(glyph);
