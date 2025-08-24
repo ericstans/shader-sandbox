@@ -69,5 +69,6 @@ function animate(ctx, t, width, height) {
 export default {
     name: 'Psychedelic Circles',
     animate,
-    resetState
+    resetState,
+    onResize: resetState
 };
