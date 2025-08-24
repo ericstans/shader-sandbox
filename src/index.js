@@ -1,6 +1,14 @@
+import plasmaPongShader from './shaders/plasmaPongShader.js';
+import digDugAntsShader from './shaders/digDugAntsShader.js';
+import cascadingShimmerShader from './shaders/cascadingShimmerShader.js';
+import dhalsimShader from './shaders/dhalsimShader.js';
+
+// Register the new shader
+import turtleCityShader from './shaders/turtleCityShader.js';
 import plasma1 from './shaders/plasma1.js';
 import plasma2 from './shaders/plasma2.js';
 import seedGrowthShader from './shaders/seedGrowthShader.js';
+import organicGrowthShader from './shaders/organicGrowthShader.js';
 import gridPsychedelicCirclesShader from './shaders/gridPsychedelicCirclesShader.js';
 import gridGlyphShader from './shaders/gridGlyphShader.js';
 import gridGlyphShader2 from './shaders/gridGlyphShader2.js';
@@ -198,7 +206,7 @@ const select = document.getElementById('shader-select');
 const shaders = [
 	{shader: plasma1, displayName: 'Demo Scene 1'},
    {shader: plasma2, displayName: 'Demo Scene 2'},
-   {shader: cubesShader, displayName: 'Cubes'},
+	{shader: cubesShader, displayName: 'Cubes'},
    {shader: cubes2Shader, displayName: 'Cubes 2'},
    {shader: cubes3Shader, displayName: 'Cubes 3'},
    {shader: cubes4Shader, displayName: 'Cubes 4'},
@@ -242,9 +250,15 @@ const shaders = [
 	{shader: gridGlyphShader, displayName: 'Grid Glyphs'},
 	{shader: gridGlyphShader2, displayName: 'Grid Glyphs 2'},
 	{shader: gridGlyphShader3, displayName: 'Grid Glyphs 3'},
-	{shader: gridGlyphShader4, displayName: 'Grid Glyphs 4'},
-	{shader: fishTankShader, displayName: 'Fish Tank'},
-	{shader: seedGrowthShader, displayName: 'Seed Growth'}
+		{shader: gridGlyphShader4, displayName: 'Grid Glyphs 4'},
+		{shader: fishTankShader, displayName: 'Fish Tank'},
+		{shader: seedGrowthShader, displayName: 'Seed Growth'},
+			{shader: organicGrowthShader, displayName: 'Organic Growth'},
+			{shader: turtleCityShader, displayName: 'Turtle City'},
+		dhalsimShader,
+		cascadingShimmerShader,
+		digDugAntsShader,
+			{shader: plasmaPongShader, displayName: 'Plasma Pong'}
 ];
 
 // Dynamically populate the dropdown

@@ -28,13 +28,29 @@ function animate(ctx, t, width, height) {
         let branches = [];
         for (let i = 0; i < nBranches; i++) {
             let frac = nBranches === 1 ? 0.5 : i / (nBranches - 1);
-            let angle = -Math.PI / 2 + (Math.PI / 3) * (frac - 0.5);
+            // Make branches less vertical: increase spread
+            let angle = -Math.PI / 2 + (Math.PI * 0.7) * (frac - 0.5); // was Math.PI/3, now 0.7*PI
             let lenFactor = 0.7 + Math.random() * 0.3;
             let leafAngleOffset = (Math.random() - 0.5) * 0.3;
             let leafColor = `hsl(${100 + Math.random() * 30}, 60%, ${60 + Math.random() * 20}%)`;
             branches.push({ angle, lenFactor, leafAngleOffset, leafColor });
         }
-        cachedParams = { width, height, roots, branches };
+        // Root offshoots: for each root, generate 3-5 offshoots, starting earlier
+        let rootOffshoots = [];
+        for (let i = 0; i < nRoots; i++) {
+            let nOff = 3 + Math.floor(Math.random() * 3); // 3-5 offshoots
+            let offshoots = [];
+            for (let j = 0; j < nOff; j++) {
+                let baseFrac = (i + 0.5) / nRoots;
+                let offFrac = baseFrac + (Math.random() - 0.5) * 0.18;
+                let angle = Math.PI * (0.7 + 0.6 * (offFrac - 0.5)) + (Math.random() - 0.5) * 0.5;
+                let lenFactor = 0.3 + Math.random() * 0.4;
+                let tOff = 0.02 + 0.18 * Math.random(); // all offshoots start in the same early window
+                offshoots.push({ angle, lenFactor, tOff });
+            }
+            rootOffshoots.push(offshoots);
+        }
+        cachedParams = { width, height, roots, branches, rootOffshoots };
     }
 
     // Split ground: top = above, bottom = below
@@ -89,7 +105,7 @@ function animate(ctx, t, width, height) {
     ctx.fill();
     ctx.restore();
 
-    // Roots animation (first 40% of progress)
+    // Roots animation (first 20% of progress)
     let rootProgress = Math.min(1, progress / 0.4);
     let nRoots = 3 + Math.floor(rootProgress * 4);
     for (let i = 0; i < nRoots; i++) {
@@ -108,12 +124,39 @@ function animate(ctx, t, width, height) {
         ctx.bezierCurveTo(cx, cy, cx, cy, ex, ey);
         ctx.globalAlpha = 0.7 + 0.3 * rootProgress;
         ctx.stroke();
-        ctx.restore();
+                let nRoots = cachedParams.roots.length;
+        // Draw root offshoots
+        let offshoots = cachedParams.rootOffshoots[i];
+        for (let k = 0; k < offshoots.length; k++) {
+            let off = offshoots[k];
+            // Offshoot only grows after main root has reached its tOff point
+            let mainRootFrac = rootLen / ((height - groundY - 18) * root.lenFactor);
+            let offshootGrow = Math.max(0, Math.min(1, (mainRootFrac - off.tOff) / (1 - off.tOff)));
+            if (offshootGrow <= 0) continue;
+            let offLen = (height - groundY - 18) * rootProgress * off.lenFactor * offshootGrow;
+            // Always start at the current tip of the main root (like branches on trunk)
+            let startX = seedX + Math.cos(angle) * rootLen;
+            let startY = seedY + 4 + Math.sin(angle) * rootLen;
+            let cx2 = startX + Math.cos(off.angle) * offLen * 0.4;
+            let cy2 = startY + Math.sin(off.angle) * offLen * 0.5;
+            let ex2 = startX + Math.cos(off.angle) * offLen;
+            let ey2 = startY + Math.sin(off.angle) * offLen;
+            ctx.save();
+            ctx.strokeStyle = '#e0d0a0';
+            ctx.lineWidth = 2.2 - 1.0 * rootProgress;
+            ctx.beginPath();
+            ctx.moveTo(startX, startY);
+            ctx.bezierCurveTo(cx2, cy2, cx2, cy2, ex2, ey2);
+            ctx.globalAlpha = 0.5 + 0.3 * rootProgress;
+            ctx.stroke();
+            ctx.restore();
+        }
     }
 
-    // Stem and branches (after 20% progress)
-    if (progress > 0.2) {
-        let stemProgress = Math.min(1, (progress - 0.2) / 0.5);
+    // Stem and branches (after 10% progress)
+    // Start stem growth earlier: after 10% progress
+    if (progress > 0.1) {
+        let stemProgress = Math.min(1, (progress - 0.1) / 0.4);
         let stemLen = (groundY - 40) * stemProgress;
         ctx.save();
         ctx.strokeStyle = '#3a7c2a';
@@ -126,6 +169,7 @@ function animate(ctx, t, width, height) {
         ctx.restore();
 
         // Branches (after 40% progress)
+        // Speed up branch growth to match roots: use 0.4 duration (was 0.4, keep for sync)
         if (progress > 0.4) {
             let branchProgress = Math.min(1, (progress - 0.4) / 0.4);
             let nBranches = 2 + Math.floor(branchProgress * 4);
