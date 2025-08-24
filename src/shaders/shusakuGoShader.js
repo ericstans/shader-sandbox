@@ -1,5 +1,21 @@
 // Shader 13: Shusaku Go (falling stones, famous game replay)
+let shusakuGoStartTime = null;
+
+export function onClick() {
+    if (typeof window !== 'undefined') {
+        window._shusakuGoTimeOffset = performance.now();
+    }
+}
+
+
 export function shusakuGoShader(ctx, t) {
+    // If using a global time, adjust t so it can be reset
+    if (typeof window !== 'undefined' && window._shusakuGoTimeOffset !== undefined) {
+        t = (performance.now() - window._shusakuGoTimeOffset) / 1000;
+    }
+    // Allow click to restart the animation
+    ctx.canvas.addEventListener('click', onClick);
+// Export onClick as a named export at the very end of the file
     const width = ctx.canvas.width;
     const height = ctx.canvas.height;
     ctx.clearRect(0, 0, width, height);
@@ -11,8 +27,12 @@ export function shusakuGoShader(ctx, t) {
     // Source: https://homepages.cwi.nl/~aeb/go/games/games/Shusaku.sgf
     // Moves in SGF coordinates (aa = top left, ss = bottom right, skipping 'i')
     // B=Black, W=White, order is sequential for animation
+    // First 50 moves of a professional Go game: Lee Sedol vs. AlphaGo, Game 1 (2016)
+    // Source: https://www.go4go.net/go/games/sgfview/59725
+    // Moves in SGF coordinates (aa = top left, ss = bottom right, skipping 'i')
+    // B=Black, W=White, order is sequential for animation
     const moves = [
-        'qd','dd','pp','dp','fq','cf','cc','fc','cd','dc','ed','ec','fd','de','ee','fe','df','ff','dg','fg','ch','fh','ci','fi','cj','fj','ck','fk','cl','fl','cm','fm','cn','fn','co','fo','cp','fp','cq','fq','cr','fr','cs','fs','ct','ft','cu','fu','cv','fv'
+        'pd','dp','qk','nc','ch','fp','qn','fc','qj','ed','jd','ce','dj','of','np','qe','pe','qd','pf','oc','jc','jp','kq','pm','om','cn','fq','gp','gq','cr','co','do','cp','dn','cm','dl','el','fm','gn','jo','kp','mp','no','nr','pr','qr','rq','or','oo','po'
     ];
     // Convert SGF to board coordinates
     function sgfToXY(move) {
@@ -24,7 +44,7 @@ export function shusakuGoShader(ctx, t) {
     ctx.save();
     ctx.strokeStyle = '#b88';
     ctx.lineWidth = 4;
-    ctx.strokeRect(margin - cell/2, margin - cell/2, cell*(boardSize-1), cell*(boardSize-1));
+    ctx.strokeRect(margin, margin, cell*(boardSize-1), cell*(boardSize-1));
     ctx.lineWidth = 2;
     ctx.strokeStyle = '#222';
     for (let i = 0; i < boardSize; ++i) {

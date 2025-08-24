@@ -6,6 +6,7 @@ const displayName = 'Fish Tank';
 
 let fish = [];
 let netEvent = null;
+let scoopedFish = [];
 let eggs = [];
 let bubbles = [];
 let causticPhase = 0;
@@ -298,7 +299,7 @@ function animate(ctx, t, width, height) {
     ctx.fillStyle = grad;
     ctx.fillRect(wallW,wallW,width-2*wallW,height-2*wallW);
     // Rare random event: cartoon net on a pole swings in from the top
-    if (!netEvent && Math.random() < 1/30) {
+    if (!netEvent && Math.random() < 1/1024) {
         // Net pivots from a point off the top of the screen
         let pivotX = Math.random() * (width * 0.7) + width*0.15;
         let pivotY = -height * 0.5 - 60;
@@ -324,7 +325,7 @@ function animate(ctx, t, width, height) {
     if (netEvent) {
         // Animate net swinging down
         netEvent.t++;
-        let swingT = Math.min(1, netEvent.t / 10000);
+        let swingT = Math.min(1, netEvent.t / 15000);
         let angle = netEvent.netAngleStart + (netEvent.netAngleEnd - netEvent.netAngleStart) * swingT * netEvent.swingDir;
         // Net position at end of pole
         let netX = netEvent.pivotX + Math.cos(angle) * netEvent.poleLen;
@@ -345,7 +346,7 @@ function animate(ctx, t, width, height) {
         ctx.strokeStyle = '#b8b8b8';
         ctx.lineWidth = 4;
         ctx.beginPath();
-    ctx.ellipse(0, 0, netEvent.netRadius, netEvent.netRadius*2, 0, 0, Math.PI*2);
+        ctx.ellipse(0, 0, netEvent.netRadius, netEvent.netRadius*2, 0, 0, Math.PI*2);
         ctx.stroke();
         // Draw net mesh
         ctx.setLineDash([8,8]);
@@ -361,9 +362,19 @@ function animate(ctx, t, width, height) {
         ctx.setLineDash([]);
         ctx.restore();
         ctx.restore();
-        // Remove all fish inside net ellipse on every frame the net is present
-        let survivors = [];
+
+        // Mark fish inside net ellipse as scooped and attach to net, but do not remove from fish array
+        const now = performance.now();
+        let scoopedThisFrame = false;
         for (let f of fish) {
+            if (f.scoopedByNet) {
+                // Already scooped, update position to follow net
+                f.x = netX + (Math.random()-0.5)*netEvent.netRadius*0.7;
+                f.y = netY + (Math.random()-0.5)*netEvent.netRadius*1.5;
+                // If not already set, mark the time scooped
+                if (!f.scoopedTime) f.scoopedTime = now;
+                continue;
+            }
             // Transform fish position into net's local ellipse space
             let dx = f.x - netX;
             let dy = f.y - netY;
@@ -374,13 +385,24 @@ function animate(ctx, t, width, height) {
             let b = netEvent.netRadius * 2;
             let inNet = (localX*localX)/(a*a) + (localY*localY)/(b*b) < 1;
             if (inNet) {
-                continue;
+                f.scoopedByNet = true;
+                f.scoopedTime = now;
+                f.x = netX + (Math.random()-0.5)*netEvent.netRadius*0.7;
+                f.y = netY + (Math.random()-0.5)*netEvent.netRadius*1.5;
+                scoopedThisFrame = true;
             }
-            survivors.push(f);
         }
-        fish = survivors;
         // End event after swing
         if (swingT >= 1.0) {
+            netEvent = null;
+        }
+
+        // Remove fish 1000ms after being scooped
+        const now2 = performance.now();
+        fish = fish.filter(f => !(f.scoopedByNet && f.scoopedTime && now2 - f.scoopedTime > 1000));
+
+        // End event 1000ms after first fish is scooped, or after swing if no fish caught
+        if ((netEvent.scoopedTime && now2 - netEvent.scoopedTime > 1000) || (!netEvent.scoopedTime && swingT >= 1.0)) {
             netEvent = null;
         }
     }
@@ -647,9 +669,9 @@ function animate(ctx, t, width, height) {
         const minY = wallW + f.size*0.5;
         const maxY = height - wallW - f.size*0.5;
         if (f.x < minX) { f.x = minX; f.vx = Math.abs(f.vx); f.flip = false; }
-        if (f.x > maxX) { f.x = maxX; f.vx = -Math.abs(f.vx); f.flip = true; }
-        if (f.y < minY) f.vy = Math.abs(f.vy);
-        if (f.y > maxY) f.vy = -Math.abs(f.vy);
+    if (f.x > maxX) { f.x = maxX; f.vx = -Math.abs(f.vx); f.flip = true; }
+    if (f.y < minY) { f.y = minY; f.vy = Math.abs(f.vy); }
+    if (f.y > maxY) { f.y = maxY; f.vy = -Math.abs(f.vy); }
     }
 }
 
