@@ -1,73 +1,3 @@
-// --- UI: Glyph Generation Style Dropdown ---
-let glyphStyleSelect = null;
-let glyphStyleDropdownContainer = null;
-function ensureGlyphStyleDropdown(canvas) {
-    if (glyphStyleDropdownContainer) return;
-    // Create container
-    glyphStyleDropdownContainer = document.createElement('div');
-    glyphStyleDropdownContainer.id = 'glyph-style-dropdown-container';
-    glyphStyleDropdownContainer.style.position = 'absolute';
-    glyphStyleDropdownContainer.style.top = '16px';
-    glyphStyleDropdownContainer.style.right = '16px';
-    glyphStyleDropdownContainer.style.zIndex = '10';
-    glyphStyleDropdownContainer.style.background = 'rgba(30,30,30,0.92)';
-    glyphStyleDropdownContainer.style.borderRadius = '8px';
-    glyphStyleDropdownContainer.style.padding = '6px 12px';
-    glyphStyleDropdownContainer.style.boxShadow = '0 2px 8px #0003';
-    // Label
-    const label = document.createElement('label');
-    label.htmlFor = 'glyph-style-select';
-    label.style.color = '#fff';
-    label.style.fontSize = '1em';
-    label.textContent = 'Glyph Style: ';
-    glyphStyleDropdownContainer.appendChild(label);
-    // Select
-    glyphStyleSelect = document.createElement('select');
-    glyphStyleSelect.id = 'glyph-style-select';
-    glyphStyleSelect.style.fontSize = '1em';
-    glyphStyleSelect.style.padding = '2px 8px';
-    const styles = [
-        { value: 'original', label: 'Original' },
-        { value: 'arabic', label: 'Arabic' },
-        { value: 'devanagari', label: 'Devanagari' },
-        { value: 'chinese', label: 'Chinese' },
-        { value: 'japanese', label: 'Japanese' },
-        { value: 'hebrew', label: 'Hebrew' },
-        { value: 'latin-cursive', label: 'Latin Cursive' },
-        { value: 'greek', label: 'Greek' },
-        { value: 'cyrillic', label: 'Cyrillic' },
-        { value: 'hangul', label: 'Hangul' },
-        { value: 'graffiti', label: 'Graffiti' },
-    ];
-    styles.forEach(s => {
-        const opt = document.createElement('option');
-        opt.value = s.value;
-        opt.textContent = s.label;
-        glyphStyleSelect.appendChild(opt);
-    });
-    glyphStyleDropdownContainer.appendChild(glyphStyleSelect);
-    // Set default and event
-    window.currentGlyphStyle = 'original';
-    glyphStyleSelect.value = 'original';
-    glyphStyleSelect.addEventListener('change', () => {
-        window.currentGlyphStyle = glyphStyleSelect.value;
-        // Force glyphs to regenerate
-        glyphs = [];
-    });
-    // Attach to canvas parent (assume parent is relative/absolute)
-    if (canvas && canvas.parentNode) {
-        canvas.parentNode.style.position = 'relative';
-        canvas.parentNode.appendChild(glyphStyleDropdownContainer);
-    }
-}
-
-function removeGlyphStyleDropdown() {
-    if (glyphStyleDropdownContainer && glyphStyleDropdownContainer.parentNode) {
-        glyphStyleDropdownContainer.parentNode.removeChild(glyphStyleDropdownContainer);
-    }
-    glyphStyleDropdownContainer = null;
-    glyphStyleSelect = null;
-}
 // Chinese-inspired glyph generator
 function randomChineseGlyph(width, height, leftNeighborType = null) {
     // Chinese: dynamic brushwork, thick/thin, dots, hooks, sweeping curves, grid-based structure
@@ -824,8 +754,6 @@ function drawGlyph(ctx, glyph, x, y, scale = 1) {
 }
 
 function animate(ctx, t, width, height) {
-    ensureGlyphStyleDropdown(ctx.canvas);
-
     if (!glyphs.length || ctx._glyphW !== width || ctx._glyphH !== height) {
         resetGlyphs(width, height);
         ctx._glyphW = width;
@@ -896,11 +824,6 @@ function animate(ctx, t, width, height) {
     ctx.restore();
 }
 
-// Called by main app when switching away from this shader
-function onDeactivate() {
-    removeGlyphStyleDropdown();
-}
-
 export default {
     name: 'Grid Glyphs 4',
     animate,
@@ -910,6 +833,5 @@ export default {
         resetGlyphs(width, height);
         // Force redraw by clearing glyphs so animate will regenerate
         glyphs = [];
-    },
-    onDeactivate
+    }
 };

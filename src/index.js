@@ -1,9 +1,11 @@
+
 import { plasma1 } from './shaders/plasma1.js';
 import { plasma2 } from './shaders/plasma2.js';
 import gridPsychedelicCirclesShader from './shaders/gridPsychedelicCirclesShader.js';
 import gridGlyphShader from './shaders/gridGlyphShader.js';
 import gridGlyphShader2 from './shaders/gridGlyphShader2.js';
 import gridGlyphShader3 from './shaders/gridGlyphShader3.js';
+import gridGlyphShader4 from './shaders/gridGlyphShader4.js';
 import { marbleMadnessInfiniteShader } from './shaders/marbleMadnessInfiniteShader.js';
 import { pachinkoShader } from './shaders/pachinkoShader.js';
 import { pachinko70sShader } from './shaders/pachinko70sShader.js';
@@ -44,7 +46,56 @@ import { theWave4Shader } from './shaders/theWave4Shader.js';
 import { auroraShader } from './shaders/auroraShader.js';
 import { mandelbrotShader } from './shaders/mandelbrotShader.js';
 import { digitalRainShader } from './shaders/digitalRainShader.js';
-// --- Shader imports ---
+
+// Glyph Generation Style dropdown
+const glyphStyleSelect = document.getElementById('glyph-style-select');
+const glyphStyleDropdownContainer = document.getElementById('glyph-style-dropdown-container');
+window.currentGlyphStyle = 'original';
+function updateGlyphStyleDropdownVisibility() {
+	// Find the index of Grid Glyphs 4 in the shaders array
+	let gridGlyphs4Index = -1;
+	for (let i = 0; i < shaders.length; i++) {
+		if ((shaders[i].displayName || '').toLowerCase().includes('grid glyphs 4')) {
+			gridGlyphs4Index = i;
+			break;
+		}
+	}
+	if (glyphStyleDropdownContainer) {
+		if (select.selectedIndex === gridGlyphs4Index) {
+			glyphStyleDropdownContainer.style.display = '';
+		} else {
+			glyphStyleDropdownContainer.style.display = 'none';
+		}
+	}
+}
+if (glyphStyleSelect) {
+	glyphStyleSelect.value = 'original';
+	glyphStyleSelect.addEventListener('change', () => {
+		window.currentGlyphStyle = glyphStyleSelect.value;
+		// Immediately reset glyphs to update the grid with the new style
+		if (typeof window.resetGlyphs === 'function') {
+			// Use the current canvas size
+			const canvas = document.getElementById('plasma-canvas');
+			if (canvas) window.resetGlyphs(canvas.width, canvas.height);
+		}
+	});
+// Expose resetGlyphs globally so the picklist can trigger it
+window.resetGlyphs = gridGlyphShader4.resetState;
+}
+
+// Ensure the picklist is hidden by default
+if (glyphStyleDropdownContainer) {
+	glyphStyleDropdownContainer.style.display = 'none';
+}
+
+// After populating the shader dropdown and setting selectedIndex, update picklist visibility
+setTimeout(() => {
+	if (glyphStyleDropdownContainer && select) {
+		updateGlyphStyleDropdownVisibility();
+		select.addEventListener('change', updateGlyphStyleDropdownVisibility);
+	}
+}, 0);
+
 
 // Canvas and context setup
 const canvas = document.getElementById('plasma-canvas');
