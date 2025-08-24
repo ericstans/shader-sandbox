@@ -276,6 +276,10 @@ if (select) {
 	}
 	select.addEventListener('change', () => {
 		currentShader = parseInt(select.value, 10) || 0;
+		// Reset zoom and pan to default
+		viewZoom = 1;
+		viewOffsetX = 0;
+		viewOffsetY = 0;
 		// Remove any previous click handler
 		canvas.onclick = null;
 		// If the shader module provides a click handler, set it
