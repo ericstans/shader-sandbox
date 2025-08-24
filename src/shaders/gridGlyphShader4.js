@@ -1,5 +1,11 @@
 import  * as glyphGenerators from '../utilities/glyphGenerators.js';
 
+var glyphCanvases = []; // For caching canvas-based glyphs, ensure global scope
+let glyphWs = [], glyphH = 60;
+let glyphs = [];
+let glyphCount = 0;
+let gridStartOffset = 0;
+
 function drawStroke(glyph, type) {
     // Padding logic for all strokes
     // Most strokes will not touch the outer edge, but sometimes (ascender/descender) they will
@@ -362,6 +368,11 @@ function drawStroke(glyph, type) {
 
 // Contextual influence: leftNeighborType biases first stroke
 function randomBaseGlyph(width, height, leftNeighborType = null) {
+    if (typeof window !== 'undefined' && window.currentGlyphStyle === 'graffiti') {
+        // For Graffiti, use the canvas-based generator and return a stub grid for compatibility
+        // We'll render these glyphs directly in drawGlyph
+        return { glyph: { __graffiti: true, width, height }, lastStrokeType: 'graffiti' };
+    }
     if (typeof window !== 'undefined' && window.currentGlyphStyle === 'japanese') {
         return { glyph: glyphGenerators.randomJapaneseGlyph(width, height, leftNeighborType), lastStrokeType: 'japanese' };
     }
@@ -377,10 +388,22 @@ function randomBaseGlyph(width, height, leftNeighborType = null) {
     if (typeof window !== 'undefined' && window.currentGlyphStyle === 'greek') {
         return { glyph: glyphGenerators.randomGreekGlyph(width, height, leftNeighborType), lastStrokeType: 'greek' };
     }
+    if (typeof window !== 'undefined' && window.currentGlyphStyle === 'cyrillic') {
+        return { glyph: glyphGenerators.randomCyrillicGlyph(width, height, leftNeighborType), lastStrokeType: 'cyrillic' };
+    }
+    if (typeof window !== 'undefined' && window.currentGlyphStyle === 'hangul') {
+        // For Hangul, use the canvas-based generator and return a stub grid for compatibility
+        // We'll render these glyphs directly in drawGlyph
+        return { glyph: { __hangul: true, width, height }, lastStrokeType: 'hangul' };
+    }
     // Style switch: Arabic
     if (typeof window !== 'undefined' && window.currentGlyphStyle === 'arabic') {
         // Always return {glyph, lastStrokeType} for compatibility
         return { glyph: glyphGenerators.randomArabicGlyph(width, height, leftNeighborType), lastStrokeType: 'arabic' };
+    }
+    if (typeof window !== 'undefined' && window.currentGlyphStyle === 'arabic2') {
+        // Always return {glyph, lastStrokeType} for compatibility
+        return { glyph: glyphGenerators.randomArabicGlyph2(width, height, leftNeighborType), lastStrokeType: 'arabic' };
     }
     if (typeof window !== 'undefined' && window.currentGlyphStyle === 'devanagari') {
         return { glyph: glyphGenerators.randomDevanagariGlyph(width, height, leftNeighborType), lastStrokeType: 'devanagari' };
@@ -394,7 +417,7 @@ function randomBaseGlyph(width, height, leftNeighborType = null) {
         'arcTL','arcTR','arcBL','arcBR',
         'zigzagH','zigzagV','crossbar','Ttop','Cleft','Eleft','Fleft',
         'sCurve','waveH','spiral'
-    ];
+    ]
     // Rhythm/density: sometimes cluster, sometimes sparse
     let n;
     let densityRoll = Math.random();
@@ -467,18 +490,16 @@ function randomBaseGlyph(width, height, leftNeighborType = null) {
     return {glyph, lastStrokeType: chosen[chosen.length-1]};
 }
 
-let glyphs = [];
-let glyphWs = [], glyphH = 60;
-let glyphCount = 0;
-let gridStartOffset = 0;
-
 function resetGlyphs(width, height) {
     // Randomize glyph height
     glyphH = 40 + Math.floor(Math.random() * 41); // 40-80
 
-    // For Chinese/Japanese styles, use fixed glyph width for all glyphs in the grid
+    // For Chinese/Japanese/Hangul styles, use fixed glyph width for all glyphs in the grid
     let isCJK = false;
-    if (typeof window !== 'undefined' && (window.currentGlyphStyle === 'chinese' || window.currentGlyphStyle === 'japanese')) {
+    if (typeof window !== 'undefined' && (
+        window.currentGlyphStyle === 'chinese' ||
+        window.currentGlyphStyle === 'japanese' ||
+        window.currentGlyphStyle === 'hangul')) {
         isCJK = true;
     }
     let fixedGlyphW = glyphH;
@@ -491,6 +512,7 @@ function resetGlyphs(width, height) {
     glyphCount = cols * rows;
     glyphs = [];
     glyphWs = [];
+    glyphCanvases = [];
     // Contextual influence: build grid row by row, passing last stroke type to next glyph
     let lastStrokeGrid = [];
     for (let row = 0; row < rows; row++) {
@@ -503,6 +525,21 @@ function resetGlyphs(width, height) {
             glyphs.push(glyph);
             glyphWs.push(glyphW);
             lastStrokeGrid[row][col] = lastStrokeType;
+            // Cache canvas for Hangul and Graffiti
+            if (glyph && (glyph.__graffiti || glyph.__hangul)) {
+                let off = document.createElement('canvas');
+                off.width = glyphW;
+                off.height = glyphH;
+                let offCtx = off.getContext('2d');
+                if (glyph.__graffiti) {
+                    glyphGenerators.randomGraffitiGlyph(offCtx, 0, 0, glyphW, { lineWidth: 2, color: '#fff', highlightColor: '#fffb' });
+                } else if (glyph.__hangul) {
+                    glyphGenerators.randomHangulGlyph(offCtx, 0, 0, glyphW, { lineWidth: 2, color: '#fff' });
+                }
+                glyphCanvases.push(off);
+            } else {
+                glyphCanvases.push(null);
+            }
         }
     }
     // Shuffle glyphs and widths together to reduce repetition
@@ -519,7 +556,20 @@ function resetGlyphs(width, height) {
 }
 
 function drawGlyph(ctx, glyph, x, y, scale = 1) {
+    // Special case: Graffiti and Hangul use cached canvases
+    if (glyph.__graffiti || glyph.__hangul) {
+        if (!drawGlyph._idx) drawGlyph._idx = 0;
+        let idx = drawGlyph._idx++;
+        let canvas = glyphCanvases[idx];
+        ctx.save();
+        ctx.translate(x, y);
+        if (canvas) ctx.drawImage(canvas, 0, 0, glyph.width * scale, glyph.height * scale);
+        ctx.restore();
+        if (drawGlyph._idx >= glyphCanvases.length) drawGlyph._idx = 0;
+        return;
+    }
     if (!glyph) return;
+    drawGlyph._idx = (drawGlyph._idx || 0) + 1;
     ctx.save();
     ctx.translate(x, y);
     ctx.fillStyle = '#fff';
