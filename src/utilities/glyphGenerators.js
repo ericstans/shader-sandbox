@@ -1,3 +1,412 @@
+// Compound Hieroglyphic glyph generator: combines 2-3 simple hieroglyphic motifs
+export function randomCompoundHieroglyphicGlyph(width, height, leftNeighborType = null) {
+    // Use the motifs from randomHieroglyphicGlyph, but combine 2-3 in one glyph
+    const glyph = emptyGlyph(width, height);
+    // Helper: draw a motif at a given offset and scale
+    function drawMotif(motif, dx, dy, scale) {
+        // Motif: 0=ankh, 1=reed, 2=water, 3=sun, 4=bird, 5=rect
+        const w = width, h = height;
+        if (motif === 0) {
+            // Ankh
+            let cx = Math.floor(w/2+dx), cy = Math.floor(h*0.38*scale+dy);
+            let r = Math.floor(Math.min(w,h)*0.18*scale);
+            for (let a = 0; a < Math.PI*2; a += Math.PI/16) {
+                let x = Math.round(cx + r*Math.cos(a));
+                let y = Math.round(cy + r*Math.sin(a));
+                if (x >= 0 && x < w && y >= 0 && y < h) glyph[y][x] = 1;
+            }
+            for (let y = cy; y < cy+Math.floor(h*0.37*scale); y++) if (y >= 0 && y < h) glyph[y][cx] = 1;
+            for (let x = cx-Math.floor(w*0.09*scale); x <= cx+Math.floor(w*0.09*scale); x++) if (x >= 0 && x < w) glyph[cy+Math.floor(h*0.24*scale)][x] = 1;
+        } else if (motif === 1) {
+            // Reed
+            let cx = Math.floor(w/2+dx);
+            for (let y = Math.floor(h*0.18*scale+dy); y < h-Math.floor(h*0.18*scale-dy); y++) if (y >= 0 && y < h) glyph[y][cx] = 1;
+            for (let i = 0; i < 4; i++) {
+                let x = cx + i - 2;
+                let y = Math.floor(h*0.18*scale+dy) - i;
+                if (x >= 0 && x < w && y >= 0 && y < h) glyph[y][x] = 1;
+            }
+        } else if (motif === 2) {
+            // Water
+            let y = Math.floor(h*0.7*scale+dy);
+            for (let x = Math.floor(w*0.18*scale+dx); x < w-Math.floor(w*0.18*scale-dx); x++) {
+                let offset = Math.round(Math.sin((x/w)*Math.PI*4)*2*scale);
+                let yy = y + offset;
+                if (yy >= 0 && yy < h) glyph[yy][x] = 1;
+            }
+        } else if (motif === 3) {
+            // Sun
+            let cx = Math.floor(w/2+dx), cy = Math.floor(h/2+dy);
+            let r = Math.floor(Math.min(w,h)*0.22*scale);
+            for (let a = 0; a < Math.PI*2; a += Math.PI/16) {
+                let x = Math.round(cx + r*Math.cos(a));
+                let y = Math.round(cy + r*Math.sin(a));
+                if (x >= 0 && x < w && y >= 0 && y < h) glyph[y][x] = 1;
+            }
+            for (let dy2 = -1; dy2 <= 1; dy2++) for (let dx2 = -1; dx2 <= 1; dx2++) {
+                let dist = Math.sqrt(dx2*dx2 + dy2*dy2);
+                if (dist <= 1.2) {
+                    let px = cx+dx2, py = cy+dy2;
+                    if (px >= 0 && px < w && py >= 0 && py < h) glyph[py][px] = 1;
+                }
+            }
+        } else if (motif === 4) {
+            // Bird
+            let cy = Math.floor(h*0.38*scale+dy);
+            let left = Math.floor(w*0.28*scale+dx), right = w - Math.floor(w*0.28*scale-dx);
+            for (let i = 0; i < 7; i++) {
+                let xL = left + i, xR = right - i, y = cy + i;
+                if (xL >= 0 && xL < w && y >= 0 && y < h) glyph[y][xL] = 1;
+                if (xR >= 0 && xR < w && y >= 0 && y < h) glyph[y][xR] = 1;
+            }
+            // Beak
+            let bx = Math.floor(w/2+dx), by = cy+7;
+            for (let i = 0; i < 3; i++) if (by+i < h) glyph[by+i][bx] = 1;
+        } else if (motif === 5) {
+            // Rectangle
+            let x0 = Math.floor(w*0.22*scale+dx), x1 = w - Math.floor(w*0.22*scale-dx);
+            let y0 = Math.floor(h*0.22*scale+dy), y1 = h - Math.floor(h*0.22*scale-dy);
+            for (let x = x0; x <= x1; x++) {
+                if (y0 >= 0 && y0 < h) glyph[y0][x] = 1;
+                if (y1 >= 0 && y1 < h) glyph[y1][x] = 1;
+            }
+            for (let y = y0; y <= y1; y++) {
+                if (x0 >= 0 && x0 < w) glyph[y][x0] = 1;
+                if (x1 >= 0 && x1 < w) glyph[y][x1] = 1;
+            }
+        }
+    }
+    // Pick 2-3 motifs, randomize position/scale for each
+    let motifs = [0,1,2,3,4,5];
+    let n = 2 + Math.floor(Math.random()*2);
+    for (let i = 0; i < n; i++) {
+        let motif = motifs[Math.floor(Math.random()*motifs.length)];
+        let dx = (Math.random()-0.5)*width*0.25;
+        let dy = (Math.random()-0.5)*height*0.25;
+        let scale = 0.7 + Math.random()*0.4;
+        drawMotif(motif, dx, dy, scale);
+    }
+    return glyph;
+}
+// Hieroglyphic glyph generator: inspired by ancient Egyptian hieroglyphics
+export function randomHieroglyphicGlyph(width, height, leftNeighborType = null) {
+    // Hieroglyphic: pictorial, geometric, animal/plant/human motifs, simple shapes
+    const glyph = emptyGlyph(width, height);
+    const w = width, h = height;
+    let type = Math.random();
+    if (type < 0.18) {
+        // Ankh (cross with loop)
+        let cx = Math.floor(w/2), cy = Math.floor(h*0.38);
+        let r = Math.floor(Math.min(w,h)*0.18);
+        for (let a = 0; a < Math.PI*2; a += Math.PI/16) {
+            let x = Math.round(cx + r*Math.cos(a));
+            let y = Math.round(cy + r*Math.sin(a));
+            if (x >= 0 && x < w && y >= 0 && y < h) glyph[y][x] = 1;
+        }
+        for (let y = cy; y < h*0.75; y++) if (y >= 0 && y < h) glyph[y][cx] = 1;
+        for (let x = cx-Math.floor(w*0.09); x <= cx+Math.floor(w*0.09); x++) if (x >= 0 && x < w) glyph[Math.floor(h*0.62)][x] = 1;
+    } else if (type < 0.36) {
+        // Reed leaf (vertical line with angled top)
+        let cx = Math.floor(w/2);
+        for (let y = Math.floor(h*0.18); y < h-Math.floor(h*0.18); y++) if (y >= 0 && y < h) glyph[y][cx] = 1;
+        for (let i = 0; i < 4; i++) {
+            let x = cx + i - 2;
+            let y = Math.floor(h*0.18) - i;
+            if (x >= 0 && x < w && y >= 0 && y < h) glyph[y][x] = 1;
+        }
+    } else if (type < 0.54) {
+        // Water ripple (horizontal zigzag)
+        let y = Math.floor(h*0.7);
+        for (let x = Math.floor(w*0.18); x < w-Math.floor(w*0.18); x++) {
+            let offset = Math.round(Math.sin((x/w)*Math.PI*4)*2);
+            let yy = y + offset;
+            if (yy >= 0 && yy < h) glyph[yy][x] = 1;
+        }
+    } else if (type < 0.72) {
+        // Sun disk (circle with dot)
+        let cx = Math.floor(w/2), cy = Math.floor(h/2);
+        let r = Math.floor(Math.min(w,h)*0.22);
+        for (let a = 0; a < Math.PI*2; a += Math.PI/16) {
+            let x = Math.round(cx + r*Math.cos(a));
+            let y = Math.round(cy + r*Math.sin(a));
+            if (x >= 0 && x < w && y >= 0 && y < h) glyph[y][x] = 1;
+        }
+        for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+            let dist = Math.sqrt(dx*dx + dy*dy);
+            if (dist <= 1.2) {
+                let px = cx+dx, py = cy+dy;
+                if (px >= 0 && px < w && py >= 0 && py < h) glyph[py][px] = 1;
+            }
+        }
+    } else if (type < 0.84) {
+        // Bird (V shape with beak)
+        let cy = Math.floor(h*0.38);
+        let left = Math.floor(w*0.28), right = w - Math.floor(w*0.28);
+        for (let i = 0; i < 7; i++) {
+            let xL = left + i, xR = right - i, y = cy + i;
+            if (xL >= 0 && xL < w && y >= 0 && y < h) glyph[y][xL] = 1;
+            if (xR >= 0 && xR < w && y >= 0 && y < h) glyph[y][xR] = 1;
+        }
+        // Beak
+        let bx = Math.floor(w/2), by = cy+7;
+        for (let i = 0; i < 3; i++) if (by+i < h) glyph[by+i][bx] = 1;
+    } else {
+        // Rectangle (house, enclosure, or throne)
+        let x0 = Math.floor(w*0.22), x1 = w - Math.floor(w*0.22);
+        let y0 = Math.floor(h*0.22), y1 = h - Math.floor(h*0.22);
+        for (let x = x0; x <= x1; x++) {
+            if (y0 >= 0 && y0 < h) glyph[y0][x] = 1;
+            if (y1 >= 0 && y1 < h) glyph[y1][x] = 1;
+        }
+        for (let y = y0; y <= y1; y++) {
+            if (x0 >= 0 && x0 < w) glyph[y][x0] = 1;
+            if (x1 >= 0 && x1 < w) glyph[y][x1] = 1;
+        }
+    }
+    return glyph;
+}
+// Op Art glyph generator: geometric, high-contrast, moiré, visual illusions, not based on any script
+export function randomOpArtGlyph(width, height, leftNeighborType = null) {
+    // Op Art: geometric, high-contrast, moiré, visual illusions
+    const glyph = emptyGlyph(width, height);
+    const w = width, h = height;
+    // Choose a pattern type: stripes, checker, concentric, or moiré
+    let type = Math.random();
+    if (type < 0.25) {
+        // Stripes (vertical, horizontal, or diagonal)
+        let dir = Math.floor(Math.random()*3);
+        let freq = 2 + Math.floor(Math.random()*4);
+        for (let y = 0; y < h; y++) {
+            for (let x = 0; x < w; x++) {
+                let v = 0;
+                if (dir === 0) v = Math.floor(x/(w/freq)); // vertical
+                else if (dir === 1) v = Math.floor(y/(h/freq)); // horizontal
+                else v = Math.floor((x+y)/(w/freq)); // diagonal
+                if (v % 2 === 0) glyph[y][x] = 1;
+            }
+        }
+    } else if (type < 0.5) {
+        // Checkerboard
+        let freq = 2 + Math.floor(Math.random()*4);
+        for (let y = 0; y < h; y++) {
+            for (let x = 0; x < w; x++) {
+                let v = (Math.floor(x/(w/freq)) + Math.floor(y/(h/freq))) % 2;
+                if (v === 0) glyph[y][x] = 1;
+            }
+        }
+    } else if (type < 0.75) {
+        // Concentric circles or ellipses
+        let cx = w/2, cy = h/2;
+        let nRings = 2 + Math.floor(Math.random()*4);
+        for (let y = 0; y < h; y++) {
+            for (let x = 0; x < w; x++) {
+                let dx = (x-cx)/(w/2), dy = (y-cy)/(h/2);
+                let r = Math.sqrt(dx*dx + dy*dy);
+                let ring = Math.floor(r*nRings);
+                if (ring % 2 === 0 && r < 1) glyph[y][x] = 1;
+            }
+        }
+    } else {
+        // Moiré: overlay two grids at an angle
+        let freq1 = 2 + Math.floor(Math.random()*3);
+        let freq2 = freq1 + 1 + Math.floor(Math.random()*2);
+        let angle = Math.PI/8 + Math.random()*Math.PI/4;
+        for (let y = 0; y < h; y++) {
+            for (let x = 0; x < w; x++) {
+                let v1 = Math.floor(x/(w/freq1));
+                let x2 = (x - w/2)*Math.cos(angle) - (y - h/2)*Math.sin(angle) + w/2;
+                let v2 = Math.floor(x2/(w/freq2));
+                if ((v1+v2)%2 === 0) glyph[y][x] = 1;
+            }
+        }
+    }
+    // Occasionally add a dot or bar for visual accent
+    if (Math.random() < 0.5) {
+        let cx = Math.floor(w*0.5 + (Math.random()-0.5)*w*0.3);
+        let cy = Math.floor(h*0.5 + (Math.random()-0.5)*h*0.3);
+        if (Math.random() < 0.5) {
+            // Dot
+            for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) {
+                let dist = Math.sqrt(dx*dx + dy*dy);
+                if (dist <= 2.2) {
+                    let px = cx+dx, py = cy+dy;
+                    if (px >= 0 && px < w && py >= 0 && py < h) glyph[py][px] = 1;
+                }
+            }
+        } else {
+            // Bar
+            let horiz = Math.random() < 0.5;
+            for (let i = -3; i <= 3; i++) {
+                let px = horiz ? cx+i : cx;
+                let py = horiz ? cy : cy+i;
+                if (px >= 0 && px < w && py >= 0 && py < h) glyph[py][px] = 1;
+            }
+        }
+    }
+    return glyph;
+}
+// Bio-Mechanical glyph generator: organic, mechanical, not based on any real script
+export function randomBioMechanicalGlyph(width, height, leftNeighborType = null) {
+    // Abstract: flowing, organic, with tubes, nodes, and mechanical joints
+    const glyph = emptyGlyph(width, height);
+    const w = width, h = height;
+    // Place 2-3 organic nodes (blobs)
+    let nNodes = 2 + Math.floor(Math.random()*2);
+    let nodes = [];
+    for (let i = 0; i < nNodes; i++) {
+        let nx = Math.floor(w*0.18 + Math.random()*w*0.64);
+        let ny = Math.floor(h*0.18 + Math.random()*h*0.64);
+        nodes.push([nx, ny]);
+        // Draw node (blobby ellipse)
+        for (let a = 0; a < Math.PI*2; a += Math.PI/10) {
+            let rx = Math.round(nx + Math.cos(a)*(2+Math.random()*1.5));
+            let ry = Math.round(ny + Math.sin(a)*(2+Math.random()*1.5));
+            if (rx >= 0 && rx < w && ry >= 0 && ry < h) glyph[ry][rx] = 1;
+        }
+    }
+    // Connect nodes with organic tubes (curved lines)
+    for (let i = 0; i < nNodes-1; i++) {
+        let [x0, y0] = nodes[i];
+        let [x1, y1] = nodes[i+1];
+        // Use a quadratic Bezier for organic tube
+        let cx = Math.floor((x0+x1)/2 + (Math.random()-0.5)*w*0.2);
+        let cy = Math.floor((y0+y1)/2 + (Math.random()-0.5)*h*0.2);
+        let steps = 18;
+        for (let t = 0; t <= steps; t++) {
+            let tt = t/steps;
+            let xt = Math.round((1-tt)*(1-tt)*x0 + 2*(1-tt)*tt*cx + tt*tt*x1);
+            let yt = Math.round((1-tt)*(1-tt)*y0 + 2*(1-tt)*tt*cy + tt*tt*y1);
+            if (xt >= 0 && xt < w && yt >= 0 && yt < h) glyph[yt][xt] = 1;
+        }
+    }
+    // Add 1-2 mechanical joints (small squares or crosses)
+    let nJoints = 1 + Math.floor(Math.random()*2);
+    for (let j = 0; j < nJoints; j++) {
+        let jx = Math.floor(w*0.18 + Math.random()*w*0.64);
+        let jy = Math.floor(h*0.18 + Math.random()*h*0.64);
+        if (Math.random() < 0.5) {
+            // Square
+            for (let dx = -1; dx <= 1; dx++) {
+                for (let dy = -1; dy <= 1; dy++) {
+                    if (jx+dx >= 0 && jx+dx < w && jy+dy >= 0 && jy+dy < h) glyph[jy+dy][jx+dx] = 1;
+                }
+            }
+        } else {
+            // Cross
+            for (let d = -1; d <= 1; d++) {
+                if (jx+d >= 0 && jx+d < w) glyph[jy][jx+d] = 1;
+                if (jy+d >= 0 && jy+d < h) glyph[jy+d][jx] = 1;
+            }
+        }
+    }
+    // Add 0-2 random tendrils (wavy lines)
+    let nTendrils = Math.floor(Math.random()*3);
+    for (let t = 0; t < nTendrils; t++) {
+        let sx = Math.floor(w*0.18 + Math.random()*w*0.64);
+        let sy = Math.floor(h*0.18 + Math.random()*h*0.64);
+        let len = 6 + Math.floor(Math.random()*6);
+        let angle = Math.random()*Math.PI*2;
+        for (let i = 0; i < len; i++) {
+            let r = i;
+            let tx = Math.round(sx + Math.cos(angle)*r + Math.sin(i*0.7)*2);
+            let ty = Math.round(sy + Math.sin(angle)*r + Math.cos(i*0.7)*2);
+            if (tx >= 0 && tx < w && ty >= 0 && ty < h) glyph[ty][tx] = 1;
+        }
+    }
+    return glyph;
+}
+// Alien Circuit glyph generator: abstract, geometric, not based on any real script
+export function randomAlienCircuitGlyph(width, height, leftNeighborType = null) {
+    // Abstract: geometric, circuit-like, with nodes, lines, arcs, and occasional symbols
+    const glyph = emptyGlyph(width, height);
+    const w = width, h = height;
+    // Place 2-4 nodes (circles)
+    let nNodes = 2 + Math.floor(Math.random()*3);
+    let nodes = [];
+    for (let i = 0; i < nNodes; i++) {
+        let nx = Math.floor(w*0.18 + Math.random()*w*0.64);
+        let ny = Math.floor(h*0.18 + Math.random()*h*0.64);
+        nodes.push([nx, ny]);
+        // Draw node (circle)
+        for (let a = 0; a < Math.PI*2; a += Math.PI/8) {
+            let rx = Math.round(nx + Math.cos(a)*2);
+            let ry = Math.round(ny + Math.sin(a)*2);
+            if (rx >= 0 && rx < w && ry >= 0 && ry < h) glyph[ry][rx] = 1;
+        }
+    }
+    // Connect nodes with lines (like wires)
+    for (let i = 0; i < nNodes-1; i++) {
+        let [x0, y0] = nodes[i];
+        let [x1, y1] = nodes[i+1];
+        let dx = Math.abs(x1 - x0), sx = x0 < x1 ? 1 : -1;
+        let dy = -Math.abs(y1 - y0), sy = y0 < y1 ? 1 : -1;
+        let err = dx + dy, e2;
+        let xx = x0, yy = y0;
+        while (true) {
+            if (xx >= 0 && xx < w && yy >= 0 && yy < h) glyph[yy][xx] = 1;
+            if (xx === x1 && yy === y1) break;
+            e2 = 2 * err;
+            if (e2 >= dy) { err += dy; xx += sx; }
+            if (e2 <= dx) { err += dx; yy += sy; }
+        }
+    }
+    // Add 1-2 random arcs (like circuit traces)
+    let nArcs = 1 + Math.floor(Math.random()*2);
+    for (let a = 0; a < nArcs; a++) {
+        let cx = Math.floor(w*0.3 + Math.random()*w*0.4);
+        let cy = Math.floor(h*0.3 + Math.random()*h*0.4);
+        let r = Math.floor(Math.min(w,h)*0.18 + Math.random()*Math.min(w,h)*0.12);
+        let startA = Math.random()*Math.PI*2;
+        let endA = startA + Math.PI*(0.7 + Math.random()*0.8);
+        for (let t = 0; t < 18; t++) {
+            let aRad = startA + (endA-startA)*t/17;
+            let x = Math.round(cx + r*Math.cos(aRad));
+            let y = Math.round(cy + r*Math.sin(aRad));
+            if (x >= 0 && x < w && y >= 0 && y < h) glyph[y][x] = 1;
+        }
+    }
+    // Add 0-2 random symbols (cross, triangle, or square)
+    let nSymbols = Math.floor(Math.random()*3);
+    for (let s = 0; s < nSymbols; s++) {
+        let sx = Math.floor(w*0.18 + Math.random()*w*0.64);
+        let sy = Math.floor(h*0.18 + Math.random()*h*0.64);
+        let type = Math.random();
+        if (type < 0.33) {
+            // Cross
+            for (let d = -2; d <= 2; d++) {
+                if (sx+d >= 0 && sx+d < w) glyph[sy][sx+d] = 1;
+                if (sy+d >= 0 && sy+d < h) glyph[sy+d][sx] = 1;
+            }
+        } else if (type < 0.66) {
+            // Triangle
+            for (let dx = -2; dx <= 2; dx++) {
+                let y1 = sy + 2;
+                let y2 = sy - 2;
+                if (sy+2 < h && sx+dx >= 0 && sx+dx < w) glyph[sy+2][sx+dx] = 1;
+                if (sy-2 >= 0 && sx+dx >= 0 && sx+dx < w) glyph[sy-2][sx+dx] = 1;
+            }
+            if (sy >= 0 && sy < h) {
+                if (sx-2 >= 0) glyph[sy][sx-2] = 1;
+                if (sx+2 < w) glyph[sy][sx+2] = 1;
+            }
+        } else {
+            // Square
+            for (let dx = -2; dx <= 2; dx++) {
+                if (sx+dx >= 0 && sx+dx < w) {
+                    if (sy-2 >= 0) glyph[sy-2][sx+dx] = 1;
+                    if (sy+2 < h) glyph[sy+2][sx+dx] = 1;
+                }
+            }
+            for (let dy = -2; dy <= 2; dy++) {
+                if (sy+dy >= 0 && sy+dy < h) {
+                    if (sx-2 >= 0) glyph[sy+dy][sx-2] = 1;
+                    if (sx+2 < w) glyph[sy+dy][sx+2] = 1;
+                }
+            }
+        }
+    }
+    return glyph;
+}
 // Alternate Arabic glyph generator for "Arabic 2" style (if not already present)
 // You may replace this with your preferred alternate logic or import from _randomArabicGlyph_original.js
 export function randomArabicGlyph(width, height, leftNeighborType = null) {
@@ -1122,31 +1531,33 @@ export function randomHangulGlyph(ctx, x, y, cellSize, opts = {}) {
 
 // Graffiti-inspired glyph generator
 export function randomGraffitiGlyph(ctx, x, y, cellSize, opts = {}) {
-    // Graffiti: bold, angular, overlapping strokes, arrows, drips, highlights
-    const pad = cellSize * 0.12 + Math.random() * cellSize * 0.06;
-    const lw = opts.lineWidth || (cellSize * (0.13 + Math.random() * 0.07));
+    // Graffiti: dynamic, overlapping, angular, with arrows, underlines, stars, bubbles, drips, and a tag effect
+    const pad = cellSize * 0.10 + Math.random() * cellSize * 0.08;
     ctx.save();
     ctx.lineCap = 'round';
     ctx.lineJoin = 'miter';
-    ctx.strokeStyle = opts.color || '#fff';
-    ctx.lineWidth = lw;
 
-    // Main strokes: 2-4 bold, angular lines
+    // 1. Main strokes: 2-4 bold, angular, overlapping lines
     let nStrokes = 2 + Math.floor(Math.random() * 3);
+    let centerX = x + cellSize/2, centerY = y + cellSize/2;
+    let baseAngle = Math.random() * Math.PI * 2;
     for (let i = 0; i < nStrokes; i++) {
-        let angle = Math.random() * Math.PI * 2;
-        let len = cellSize * (0.5 + Math.random() * 0.35);
-        let cx = x + pad + Math.random() * (cellSize - 2 * pad);
-        let cy = y + pad + Math.random() * (cellSize - 2 * pad);
-        let ex = cx + Math.cos(angle) * len * (0.5 + Math.random()*0.5);
-        let ey = cy + Math.sin(angle) * len * (0.5 + Math.random()*0.5);
+        let angle = baseAngle + (Math.random()-0.5)*Math.PI*0.7 + i*Math.PI/3;
+        let len = cellSize * (0.45 + Math.random() * 0.38);
+        let cx = centerX + Math.cos(angle+Math.PI/2)*cellSize*0.13*(Math.random()-0.5);
+        let cy = centerY + Math.sin(angle+Math.PI/2)*cellSize*0.13*(Math.random()-0.5);
+        let ex = cx + Math.cos(angle) * len * (0.7 + Math.random()*0.5);
+        let ey = cy + Math.sin(angle) * len * (0.7 + Math.random()*0.5);
+        let lw = opts.lineWidth || (cellSize * (0.13 + Math.random() * 0.13));
+        ctx.save();
+        ctx.strokeStyle = opts.color || (Math.random()<0.5 ? '#fff' : '#fffa');
+        ctx.lineWidth = lw;
         ctx.beginPath();
         ctx.moveTo(cx, cy);
         ctx.lineTo(ex, ey);
         ctx.stroke();
-
-        // Occasionally add an arrowhead
-        if (Math.random() < 0.4) {
+        // Add arrowhead
+        if (Math.random() < 0.6) {
             let ahLen = lw * (1.7 + Math.random()*0.7);
             let ahAngle = Math.PI/7 + Math.random()*Math.PI/7;
             for (let dir of [-1, 1]) {
@@ -1159,9 +1570,38 @@ export function randomGraffitiGlyph(ctx, x, y, cellSize, opts = {}) {
                 ctx.stroke();
             }
         }
-
-        // Occasionally add a drip
-        if (Math.random() < 0.25) {
+        // Add star or bubble at end
+        if (Math.random() < 0.18) {
+            if (Math.random() < 0.5) {
+                // Star
+                ctx.save();
+                ctx.strokeStyle = opts.highlightColor || '#ff0';
+                ctx.lineWidth = lw*0.7;
+                ctx.beginPath();
+                let r = lw*1.1;
+                for (let j = 0; j < 5; j++) {
+                    let a = Math.PI*2*j/5;
+                    let sx = ex + Math.cos(a)*r;
+                    let sy = ey + Math.sin(a)*r;
+                    if (j === 0) ctx.moveTo(sx, sy);
+                    else ctx.lineTo(sx, sy);
+                }
+                ctx.closePath();
+                ctx.stroke();
+                ctx.restore();
+            } else {
+                // Bubble
+                ctx.save();
+                ctx.strokeStyle = opts.highlightColor || '#0ffb';
+                ctx.lineWidth = lw*0.5;
+                ctx.beginPath();
+                ctx.arc(ex, ey, lw*1.1, 0, 2*Math.PI);
+                ctx.stroke();
+                ctx.restore();
+            }
+        }
+        // Add drip
+        if (Math.random() < 0.22) {
             let dripLen = cellSize * (0.12 + Math.random()*0.08);
             ctx.save();
             ctx.strokeStyle = opts.color || '#fff';
@@ -1172,13 +1612,33 @@ export function randomGraffitiGlyph(ctx, x, y, cellSize, opts = {}) {
             ctx.stroke();
             ctx.restore();
         }
+        ctx.restore();
     }
 
-    // Add highlights (thin, bright lines)
-    if (Math.random() < 0.7) {
+    // 2. Add a quick underline/tag swoosh
+    if (Math.random() < 0.9) {
         ctx.save();
-        ctx.strokeStyle = opts.highlightColor || '#fffb';
-        ctx.lineWidth = lw * 0.32;
+        ctx.strokeStyle = opts.color || '#fff';
+        ctx.lineWidth = cellSize*0.09 + Math.random()*cellSize*0.06;
+        let ux = x + pad + Math.random()*cellSize*0.2;
+        let uy = y + cellSize*0.82 + Math.random()*cellSize*0.08;
+        let uw = cellSize*0.6 + Math.random()*cellSize*0.18;
+        ctx.beginPath();
+        ctx.moveTo(ux, uy);
+        ctx.bezierCurveTo(
+            ux + uw*0.3, uy + cellSize*0.08*(Math.random()-0.5),
+            ux + uw*0.7, uy + cellSize*0.08*(Math.random()-0.5),
+            ux + uw, uy + (Math.random()-0.5)*cellSize*0.08
+        );
+        ctx.stroke();
+        ctx.restore();
+    }
+
+    // 3. Add highlights (thin, bright lines)
+    if (Math.random() < 0.8) {
+        ctx.save();
+        ctx.strokeStyle = opts.highlightColor || (Math.random()<0.5 ? '#fffb' : '#0ffb');
+        ctx.lineWidth = cellSize * 0.03 + Math.random()*cellSize*0.02;
         let hx = x + pad + Math.random() * (cellSize - 2 * pad);
         let hy = y + pad + Math.random() * (cellSize - 2 * pad);
         let hlen = cellSize * (0.22 + Math.random()*0.18);

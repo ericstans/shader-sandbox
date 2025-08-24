@@ -101,11 +101,73 @@ setTimeout(() => {
 
 
 // Canvas and context setup
+
 const canvas = document.getElementById('plasma-canvas');
 const ctx = canvas.getContext('2d');
 let width = canvas.width;
 let height = canvas.height;
 let imageData, data;
+
+// --- Zoom and Pan State ---
+let viewZoom = 1;
+let viewOffsetX = 0;
+let viewOffsetY = 0;
+let isPanning = false;
+let panStart = {x: 0, y: 0};
+let panOrigin = {x: 0, y: 0};
+
+canvas.addEventListener('wheel', (e) => {
+	e.preventDefault();
+	const zoomIntensity = 1.08;
+	const mouseX = (e.offsetX - viewOffsetX) / viewZoom;
+	const mouseY = (e.offsetY - viewOffsetY) / viewZoom;
+	if (e.deltaY < 0) {
+		// Zoom in
+		viewZoom *= zoomIntensity;
+	} else {
+		// Zoom out, but do not allow below 1
+		viewZoom = Math.max(1, viewZoom / zoomIntensity);
+	}
+	// Adjust offset so zoom is centered on mouse
+	let newOffsetX = e.offsetX - mouseX * viewZoom;
+	let newOffsetY = e.offsetY - mouseY * viewZoom;
+	// Clamp after zoom
+	const minX = Math.min(0, width - width * viewZoom);
+	const maxX = 0;
+	const minY = Math.min(0, height - height * viewZoom);
+	const maxY = 0;
+	viewOffsetX = Math.max(minX, Math.min(maxX, newOffsetX));
+	viewOffsetY = Math.max(minY, Math.min(maxY, newOffsetY));
+}, { passive: false });
+
+canvas.addEventListener('mousedown', (e) => {
+	if (e.button === 1) { // Middle mouse
+		isPanning = true;
+		panStart.x = e.clientX;
+		panStart.y = e.clientY;
+		panOrigin.x = viewOffsetX;
+		panOrigin.y = viewOffsetY;
+		e.preventDefault();
+	}
+});
+window.addEventListener('mousemove', (e) => {
+	if (isPanning) {
+		let newOffsetX = panOrigin.x + (e.clientX - panStart.x);
+		let newOffsetY = panOrigin.y + (e.clientY - panStart.y);
+		// Clamp so the image cannot be panned outside the canvas
+		const minX = Math.min(0, width - width * viewZoom);
+		const maxX = 0;
+		const minY = Math.min(0, height - height * viewZoom);
+		const maxY = 0;
+		viewOffsetX = Math.max(minX, Math.min(maxX, newOffsetX));
+		viewOffsetY = Math.max(minY, Math.min(maxY, newOffsetY));
+	}
+});
+window.addEventListener('mouseup', (e) => {
+	if (e.button === 1) {
+		isPanning = false;
+	}
+});
 
 function resizeCanvas() {
 	// Calculate available space (subtract dropdown height, e.g. 70px)
@@ -246,6 +308,9 @@ function render(time) {
 			shaders[currentShader].onResize({ canvas, ctx, width, height });
 		}
 	}
+	// Apply pan/zoom transform
+	ctx.save();
+	ctx.setTransform(viewZoom, 0, 0, viewZoom, viewOffsetX, viewOffsetY);
 	// Animate function
 	if (shaders[currentShader] && shaders[currentShader].shader && typeof shaders[currentShader].shader.animate === 'function') {
 		shaders[currentShader].shader.animate(ctx, t, width, height);
@@ -256,6 +321,7 @@ function render(time) {
 	} else if (typeof shaders[currentShader] === 'function') {
 		shaders[currentShader](ctx, t, width, height);
 	}
+	ctx.restore();
 	requestAnimationFrame(render);
 }
 requestAnimationFrame(render);

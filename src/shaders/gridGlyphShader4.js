@@ -368,6 +368,21 @@ function drawStroke(glyph, type) {
 
 // Contextual influence: leftNeighborType biases first stroke
 function randomBaseGlyph(width, height, leftNeighborType = null) {
+    if (typeof window !== 'undefined' && window.currentGlyphStyle === 'compound-hieroglyphic') {
+        return { glyph: glyphGenerators.randomCompoundHieroglyphicGlyph(width, height, leftNeighborType), lastStrokeType: 'compound-hieroglyphic' };
+    }
+    if (typeof window !== 'undefined' && window.currentGlyphStyle === 'hieroglyphic') {
+        return { glyph: glyphGenerators.randomHieroglyphicGlyph(width, height, leftNeighborType), lastStrokeType: 'hieroglyphic' };
+    }
+    if (typeof window !== 'undefined' && window.currentGlyphStyle === 'op-art') {
+        return { glyph: glyphGenerators.randomOpArtGlyph(width, height, leftNeighborType), lastStrokeType: 'op-art' };
+    }
+    if (typeof window !== 'undefined' && window.currentGlyphStyle === 'bio-mechanical') {
+        return { glyph: glyphGenerators.randomBioMechanicalGlyph(width, height, leftNeighborType), lastStrokeType: 'bio-mechanical' };
+    }
+    if (typeof window !== 'undefined' && window.currentGlyphStyle === 'alien-circuit') {
+        return { glyph: glyphGenerators.randomAlienCircuitGlyph(width, height, leftNeighborType), lastStrokeType: 'alien-circuit' };
+    }
     if (typeof window !== 'undefined' && window.currentGlyphStyle === 'graffiti') {
         // For Graffiti, use the canvas-based generator and return a stub grid for compatibility
         // We'll render these glyphs directly in drawGlyph
