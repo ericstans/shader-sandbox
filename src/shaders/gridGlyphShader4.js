@@ -368,6 +368,9 @@ function randomBaseGlyph(width, height, leftNeighborType = null) {
     if (typeof window !== 'undefined' && window.currentGlyphStyle === 'chinese') {
         return { glyph: glyphGenerators.randomChineseGlyph(width, height, leftNeighborType), lastStrokeType: 'chinese' };
     }
+    if (typeof window !== 'undefined' && window.currentGlyphStyle === 'hebrew') {
+        return { glyph: glyphGenerators.randomHebrewGlyph(width, height, leftNeighborType), lastStrokeType: 'hebrew' };
+    }
     // Style switch: Arabic
     if (typeof window !== 'undefined' && window.currentGlyphStyle === 'arabic') {
         // Always return {glyph, lastStrokeType} for compatibility
@@ -458,31 +461,6 @@ function randomBaseGlyph(width, height, leftNeighborType = null) {
     return {glyph, lastStrokeType: chosen[chosen.length-1]};
 }
 
-function mutateGlyph(glyph) {
-    // Copy
-    const h = glyph.length, w = glyph[0].length;
-    let newGlyph = glyph.map(row => row.slice());
-    // Randomly flip
-    if (Math.random()<0.5) newGlyph = newGlyph.map(row => row.slice().reverse());
-    if (Math.random()<0.5) newGlyph = newGlyph.slice().reverse();
-    // Randomly shift
-    if (Math.random()<0.5) {
-        let shift = Math.floor(Math.random()*3)-1;
-        if (shift) newGlyph = newGlyph.map(row => {
-            let r = row.slice();
-            if (shift>0) for(let i=0;i<shift;i++) r.unshift(r.pop());
-            else for(let i=0;i<-shift;i++) r.push(r.shift());
-            return r;
-        });
-    }
-    // Randomly toggle a few pixels
-    // for (let i=0; i<Math.floor(w*h*0.03); i++) {
-    //     let x = Math.floor(Math.random()*w), y = Math.floor(Math.random()*h);
-    //     newGlyph[y][x] = newGlyph[y][x] ? 0 : 1;
-    // }
-    return newGlyph;
-}
-
 let glyphs = [];
 let glyphWs = [], glyphH = 60;
 let glyphCount = 0;
@@ -534,17 +512,6 @@ function resetGlyphs(width, height) {
     resetGlyphs._rows = rows;
 }
 
-// Ink/brush simulation: ink bleed and dry-brush effects
-// Precompute dry-brush/bleed mask for each glyph instance at display time
-const glyphInstanceMaskCache = new WeakMap();
-function getGlyphInstanceKey(glyph, x, y, scale) {
-    // Use a unique object per instance (not just glyph array)
-    // We use a WeakMap keyed by a wrapper object for each instance
-    // But since we can't guarantee unique objects for each instance, use a Map-of-Maps fallback
-    // For now, just use a global Map keyed by a stringified key
-    return `${glyph}_${x}_${y}_${scale}`;
-}
-const glyphInstanceMaskMap = new Map();
 function drawGlyph(ctx, glyph, x, y, scale = 1) {
     if (!glyph) return;
     ctx.save();
