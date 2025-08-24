@@ -361,28 +361,24 @@ function animate(ctx, t, width, height) {
         ctx.setLineDash([]);
         ctx.restore();
         ctx.restore();
-        // Remove fish if net passes through tank and hasn't scooped yet
-        if (!netEvent.scooped && swingT > 0.5) {
-            netEvent.scooped = true;
-            // Remove all fish inside net ellipse
-            let survivors = [];
-            for (let f of fish) {
-                // Transform fish position into net's local ellipse space
-                let dx = f.x - netX;
-                let dy = f.y - netY;
-                let localX = Math.cos(-angle - Math.PI/2)*dx - Math.sin(-angle - Math.PI/2)*dy;
-                let localY = Math.sin(-angle - Math.PI/2)*dx + Math.cos(-angle - Math.PI/2)*dy;
-                // Ellipse: (x/a)^2 + (y/b)^2 < 1
-                let a = netEvent.netRadius;
-                let b = netEvent.netRadius * 2;
-                let inNet = (localX*localX)/(a*a) + (localY*localY)/(b*b) < 1;
-                if (inNet) {
-                    continue;
-                }
-                survivors.push(f);
+        // Remove all fish inside net ellipse on every frame the net is present
+        let survivors = [];
+        for (let f of fish) {
+            // Transform fish position into net's local ellipse space
+            let dx = f.x - netX;
+            let dy = f.y - netY;
+            let localX = Math.cos(-angle - Math.PI/2)*dx - Math.sin(-angle - Math.PI/2)*dy;
+            let localY = Math.sin(-angle - Math.PI/2)*dx + Math.cos(-angle - Math.PI/2)*dy;
+            // Ellipse: (x/a)^2 + (y/b)^2 < 1
+            let a = netEvent.netRadius;
+            let b = netEvent.netRadius * 2;
+            let inNet = (localX*localX)/(a*a) + (localY*localY)/(b*b) < 1;
+            if (inNet) {
+                continue;
             }
-            fish = survivors;
+            survivors.push(f);
         }
+        fish = survivors;
         // End event after swing
         if (swingT >= 1.0) {
             netEvent = null;
