@@ -52,7 +52,7 @@ function reset() {
     } else {
       y = Math.random() * (STICK_RADIUS - 3) + STICK_RADIUS + 3; // lower half
     }
-    pebbles.push({x, y, vx: 0, vy: 0, lastPin: -1});
+  pebbles.push({x, y, vx: 0, vy: 0, lastPin: -1, prevPin: -1});
   }
   state = {
     pins,
@@ -398,7 +398,7 @@ function animate(ctx, t, width, height) {
       let dy = pebble.y - pin.y;
       let dist = Math.sqrt(dx*dx + dy*dy);
       if (dist < 6) {
-        // Only play sound if speed before bounce is above threshold and not hitting same pin as last time
+        // Only play sound if speed before bounce is above threshold and not hitting same pin as last time or the one before
         let preSpeed = Math.sqrt(pebble.vx*pebble.vx + pebble.vy*pebble.vy);
         // Simple bounce with energy loss
         let nx = dx / (dist || 1);
@@ -408,16 +408,37 @@ function animate(ctx, t, width, height) {
         // Slow down the pebble to simulate energy loss
         pebble.vx *= 0.5;
         pebble.vy *= 0.5;
-        if (preSpeed > MIN_SOUND_SPEED && pebble.lastPin !== pinIdx) {
+        if (
+          preSpeed > MIN_SOUND_SPEED &&
+          pebble.lastPin !== pinIdx &&
+          pebble.prevPin !== pinIdx
+        ) {
           // Map speed to velocity: min 0.25, max 1.0
           let minV = 0.25, maxV = 1.0, maxSpeed = 6;
           let velocity = minV + Math.min(1, (preSpeed - MIN_SOUND_SPEED) / (maxSpeed - MIN_SOUND_SPEED)) * (maxV - minV);
           state.soundQueue.push({x: pebble.x, y: pebble.y, t: performance.now(), speed: velocity});
+          pebble.prevPin = pebble.lastPin;
           pebble.lastPin = pinIdx;
         }
       } else if (pebble.lastPin === pinIdx) {
-        // Reset lastPin if no longer colliding
-        pebble.lastPin = -1;
+        // Only reset lastPin if not colliding with any pin
+        // (Do not reset on wall or other collisions)
+        let stillOnAnyPin = false;
+        for (let k = 0; k < state.pins.length; k++) {
+          if (k !== pinIdx) {
+            let p2 = state.pins[k];
+            let dx2 = pebble.x - p2.x;
+            let dy2 = pebble.y - p2.y;
+            let dist2 = Math.sqrt(dx2*dx2 + dy2*dy2);
+            if (dist2 < 6) {
+              stillOnAnyPin = true;
+              break;
+            }
+          }
+        }
+        if (!stillOnAnyPin) {
+          pebble.lastPin = -1;
+        }
       }
     }
     // Collide with other pebbles

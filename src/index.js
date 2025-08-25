@@ -208,65 +208,64 @@ resizeCanvas();
 // Get the shader dropdown element
 const select = document.getElementById('shader-select');
 const shaders = [
-	{shader: plasma1, displayName: 'Demo Scene 1'},
-   {shader: plasma2, displayName: 'Demo Scene 2'},
-	{shader: cubesShader, displayName: 'Cubes'},
-   {shader: cubes2Shader, displayName: 'Cubes 2'},
-   {shader: cubes3Shader, displayName: 'Cubes 3'},
-   {shader: cubes4Shader, displayName: 'Cubes 4'},
-   {shader: dancingLinesShader, displayName: 'Dancing Lines'},
-   {shader: outrunAsciiShader, displayName: 'Outrun ASCII'},
-   {shader: pipes95Shader, displayName: 'Pipes 95'},
-   {shader: pipes95_2Shader, displayName: 'Pipes 95 2'},
-   {shader: pipes95_3Shader, displayName: 'Pipes 95 3'},
-   {shader: pipes95_4Shader, displayName: 'Pipes 95 4'},
-   {shader: shusakuGoShader, displayName: 'Shusaku Go'},
-   {shader: theWaveShader, displayName: 'The Wave'},
-   {shader: theWave2Shader, displayName: 'The Wave 2'},
-   {shader: theWave3Shader, displayName: 'The Wave 3'},
-   {shader: theWave4Shader, displayName: 'The Wave 4'},
-   {shader: auroraShader, displayName: 'Aurora Borealis'},
-   {shader: mandelbrotShader, displayName: 'Mandelbrot Explorer'},
-   {shader: digitalRainShader, displayName: 'Digital Rain'},
-   {shader: aurora2Shader, displayName: 'Aurora Borealis 2 (Wispy)'},
-   {shader: aurora3Shader, displayName: 'Aurora Borealis 3 (Wide/Fast)'},
-   {shader: starfieldShader, displayName: 'Starfield (Win95)'},
-   {shader: starfield2Shader, displayName: 'Starfield 2 (Hyperspace)'},
-   {shader: oneillShader, displayName: "+ Planet + O'Neill Cylinder"},
-   {shader: oneill2Shader, displayName: "+ Planet + O'Neill Cylinder 2"},
-   {shader: oneill3Shader, displayName: "+ Planet + O'Neill Cylinder 3"},
-   {shader: horseRaceShader, displayName: 'Horse Race'},
-   {shader: win95MazeShader, displayName: 'Windows 95 Maze Screensaver'},
-   {shader: win95Maze2Shader, displayName: 'Windows 95 Maze Screensaver 2'},
-   {shader: ballpointPenShader, displayName: 'Ballpoint Pen Drawing'},
-   {shader: ballpointPen2Shader, displayName: 'Ballpoint Pen Drawing 2 (Animated)'},
-   {shader: ballpointPen3Shader, displayName: 'Ballpoint Pen Drawing 3 (Cumulative)'},
-   {shader: ballpointPen4Shader, displayName: 'Ballpoint Pen Drawing 4 (5 Pastel Lines)'},
-   {shader: ballpointPen5Shader, displayName: 'Ballpoint Pen Drawing 5 (5 Persistent, Synchronized)'},
-   {shader: lowPolySpheresShader, displayName: 'Low-Poly 3D Spheres (Bouncing)'},
-   {shader: pachinkoShader, displayName: 'Pachinko (Auto)'},
-   {shader: pachinko70sShader, displayName: 'Pachinko (1970s Classic)'},
-   {shader: marbleMadnessInfiniteShader, displayName: 'Marble Madness (Infinite)'},
-   {shader: gridConcentricCShader, displayName: 'Concentric C Grid'},
-   {shader: gridConcentricCShader2, displayName: 'Concentric C Grid 2'},
-   {shader: gridConcentricCShader3, displayName: 'Concentric C Grid 3'},
-   {shader: gridPsychedelicCirclesShader, displayName: 'Psychedelic Circles'},
-	{shader: gridGlyphShader, displayName: 'Grid Glyphs'},
-	{shader: gridGlyphShader2, displayName: 'Grid Glyphs 2'},
-	{shader: gridGlyphShader3, displayName: 'Grid Glyphs 3'},
-		{shader: gridGlyphShader4, displayName: 'Grid Glyphs 4'},
-		{shader: fishTankShader, displayName: 'Fish Tank'},
-		seedGrowthShader,
-			organicGrowthShader,
-			turtleCityShader,
-		dhalsimShader,
-		cascadingShimmerShader,
-		digDugAntsShader,
-			{shader: plasmaPongShader, displayName: 'Plasma Pong'},
-			{shader: tetrisShader, displayName: 'Tetris'},
-		{shader: puyoShader, displayName: 'Puyo Puyo'},
-			{shader: rainstickShader, displayName: 'Rainstick'}
-
+	{ shader: plasma1, displayName: 'Demo Scene 1' },
+	{ shader: plasma2, displayName: 'Demo Scene 2' },
+	{ shader: cubesShader, displayName: 'Cubes' },
+	{ shader: cubes2Shader, displayName: 'Cubes 2' },
+	{ shader: cubes3Shader, displayName: 'Cubes 3' },
+	{ shader: cubes4Shader, displayName: 'Cubes 4' },
+	{ shader: dancingLinesShader, displayName: 'Dancing Lines' },
+	{ shader: outrunAsciiShader, displayName: 'Outrun ASCII' },
+	{ shader: pipes95Shader, displayName: 'Pipes 95' },
+	{ shader: pipes95_2Shader, displayName: 'Pipes 95 2' },
+	{ shader: pipes95_3Shader, displayName: 'Pipes 95 3' },
+	{ shader: pipes95_4Shader, displayName: 'Pipes 95 4' },
+	{ shader: shusakuGoShader, displayName: 'Shusaku Go' },
+	{ shader: theWaveShader, displayName: 'The Wave' },
+	{ shader: theWave2Shader, displayName: 'The Wave 2' },
+	{ shader: theWave3Shader, displayName: 'The Wave 3' },
+	{ shader: theWave4Shader, displayName: 'The Wave 4' },
+	{ shader: auroraShader, displayName: 'Aurora Borealis' },
+	{ shader: mandelbrotShader, displayName: 'Mandelbrot Explorer' },
+	{ shader: digitalRainShader, displayName: 'Digital Rain' },
+	{ shader: aurora2Shader, displayName: 'Aurora Borealis 2 (Wispy)' },
+	{ shader: aurora3Shader, displayName: 'Aurora Borealis 3 (Wide/Fast)' },
+	{ shader: starfieldShader, displayName: 'Starfield (Win95)' },
+	{ shader: starfield2Shader, displayName: 'Starfield 2 (Hyperspace)' },
+	{ shader: oneillShader, displayName: "+ Planet + O'Neill Cylinder" },
+	{ shader: oneill2Shader, displayName: "+ Planet + O'Neill Cylinder 2" },
+	{ shader: oneill3Shader, displayName: "+ Planet + O'Neill Cylinder 3" },
+	{ shader: horseRaceShader, displayName: 'Horse Race' },
+	{ shader: win95MazeShader, displayName: 'Windows 95 Maze Screensaver' },
+	{ shader: win95Maze2Shader, displayName: 'Windows 95 Maze Screensaver 2' },
+	{ shader: ballpointPenShader, displayName: 'Ballpoint Pen Drawing' },
+	{ shader: ballpointPen2Shader, displayName: 'Ballpoint Pen Drawing 2 (Animated)' },
+	{ shader: ballpointPen3Shader, displayName: 'Ballpoint Pen Drawing 3 (Cumulative)' },
+	{ shader: ballpointPen4Shader, displayName: 'Ballpoint Pen Drawing 4 (5 Pastel Lines)' },
+	{ shader: ballpointPen5Shader, displayName: 'Ballpoint Pen Drawing 5 (5 Persistent, Synchronized)' },
+	{ shader: lowPolySpheresShader, displayName: 'Low-Poly 3D Spheres (Bouncing)' },
+	{ shader: pachinkoShader, displayName: 'Pachinko (Auto)' },
+	{ shader: pachinko70sShader, displayName: 'Pachinko (1970s Classic)' },
+	{ shader: marbleMadnessInfiniteShader, displayName: 'Marble Madness (Infinite)' },
+	{ shader: gridConcentricCShader, displayName: 'Concentric C Grid' },
+	{ shader: gridConcentricCShader2, displayName: 'Concentric C Grid 2' },
+	{ shader: gridConcentricCShader3, displayName: 'Concentric C Grid 3' },
+	{ shader: gridPsychedelicCirclesShader, displayName: 'Psychedelic Circles' },
+	{ shader: gridGlyphShader, displayName: 'Grid Glyphs' },
+	{ shader: gridGlyphShader2, displayName: 'Grid Glyphs 2' },
+	{ shader: gridGlyphShader3, displayName: 'Grid Glyphs 3' },
+	{ shader: gridGlyphShader4, displayName: 'Grid Glyphs 4' },
+	{ shader: fishTankShader, displayName: 'Fish Tank' },
+	seedGrowthShader,
+	organicGrowthShader,
+	turtleCityShader,
+	dhalsimShader,
+	cascadingShimmerShader,
+	digDugAntsShader,
+	{ shader: plasmaPongShader, displayName: 'Plasma Pong' },
+	{ shader: tetrisShader, displayName: 'Tetris' },
+	{ shader: puyoShader, displayName: 'Puyo Puyo' },
+	{ shader: rainstickShader, displayName: 'Rainstick' }
 ];
 
 
@@ -286,8 +285,23 @@ if (select) {
 
 let currentShader = 0;
 if (select) {
-	// Always select the last option on page load
-	select.selectedIndex = shaders.length - 1;
+	// Check for shader URL parameter
+	let urlParams = new URLSearchParams(window.location.search);
+	let shaderParam = urlParams.get('shader');
+	let initialIndex = shaders.length - 1; // default: last shader
+	if (shaderParam) {
+		// Try to match by displayName (case-insensitive)
+		let found = shaders.findIndex(s => {
+			let name = s.displayName || (s.shader && s.shader.displayName);
+			return name && name.toLowerCase().replace(/\s+/g, '') === shaderParam.toLowerCase().replace(/\s+/g, '');
+		});
+		if (found !== -1) {
+			initialIndex = found;
+		} else if (!isNaN(Number(shaderParam)) && Number(shaderParam) >= 0 && Number(shaderParam) < shaders.length) {
+			initialIndex = Number(shaderParam);
+		}
+	}
+	select.selectedIndex = initialIndex;
 	currentShader = select.selectedIndex;
 	// On load, initialize state for the active shader
 	if (shaders[currentShader] && shaders[currentShader].shader && shaders[currentShader].shader.onResize) {
@@ -303,36 +317,36 @@ if (select) {
 	} else {
 		canvas.onclick = null;
 	}
-		let previousShader = currentShader;
-		select.addEventListener('change', () => {
-			// Call onChangedAway on the previous shader if it exists
-			if (shaders[previousShader]) {
-				const s = shaders[previousShader].shader || shaders[previousShader];
-				if (typeof s.onChangedAway === 'function') {
-					s.onChangedAway();
-				}
+	let previousShader = currentShader;
+	select.addEventListener('change', () => {
+		// Call onChangedAway on the previous shader if it exists
+		if (shaders[previousShader]) {
+			const s = shaders[previousShader].shader || shaders[previousShader];
+			if (typeof s.onChangedAway === 'function') {
+				s.onChangedAway();
 			}
-			currentShader = parseInt(select.value, 10) || 0;
-			previousShader = currentShader;
-			// Reset zoom and pan to default
-			viewZoom = 1;
-			viewOffsetX = 0;
-			viewOffsetY = 0;
-			// Remove any previous click handler
-			canvas.onclick = null;
-			// If the shader module provides a click handler, set it
-			if (shaders[currentShader] && shaders[currentShader].shader && shaders[currentShader].shader.onClick) {
-				canvas.onclick = (e) => shaders[currentShader].shader.onClick(e, { canvas, ctx, width, height });
-			} else if (shaders[currentShader] && shaders[currentShader].onClick) {
-				canvas.onclick = (e) => shaders[currentShader].onClick(e, { canvas, ctx, width, height });
-			}
-			// On shader switch, initialize state for the new shader
-			if (shaders[currentShader] && shaders[currentShader].shader && shaders[currentShader].shader.onResize) {
-				shaders[currentShader].shader.onResize({ canvas, ctx, width, height });
-			} else if (shaders[currentShader] && shaders[currentShader].onResize) {
-				shaders[currentShader].onResize({ canvas, ctx, width, height });
-			}
-		});
+		}
+		currentShader = parseInt(select.value, 10) || 0;
+		previousShader = currentShader;
+		// Reset zoom and pan to default
+		viewZoom = 1;
+		viewOffsetX = 0;
+		viewOffsetY = 0;
+		// Remove any previous click handler
+		canvas.onclick = null;
+		// If the shader module provides a click handler, set it
+		if (shaders[currentShader] && shaders[currentShader].shader && shaders[currentShader].shader.onClick) {
+			canvas.onclick = (e) => shaders[currentShader].shader.onClick(e, { canvas, ctx, width, height });
+		} else if (shaders[currentShader] && shaders[currentShader].onClick) {
+			canvas.onclick = (e) => shaders[currentShader].onClick(e, { canvas, ctx, width, height });
+		}
+		// On shader switch, initialize state for the new shader
+		if (shaders[currentShader] && shaders[currentShader].shader && shaders[currentShader].shader.onResize) {
+			shaders[currentShader].shader.onResize({ canvas, ctx, width, height });
+		} else if (shaders[currentShader] && shaders[currentShader].onResize) {
+			shaders[currentShader].onResize({ canvas, ctx, width, height });
+		}
+	});
 }
 
 function render(time) {
