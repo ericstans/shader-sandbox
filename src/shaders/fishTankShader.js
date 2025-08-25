@@ -123,28 +123,7 @@ function onClick(e, {canvas, ctx, width, height}) {
     // Only add food if inside tank (not on wall)
     const wallW = 10;
     if (e.button === 1) {
-        // Middle click: start net event at click X
-        if (!netEvent) {
-            let pivotX = x;
-            let pivotY = -height * 0.5 - 60;
-            let poleLenBase = height * 0.8;
-            let poleLen = poleLenBase * (Math.random()*1.5);
-            let netRadius = 60 + Math.random()*40;
-            let netAngleStart = 0;
-            let netAngleEnd = 180;
-            let swingDir = Math.random() < 0.5 ? 1 : -1;
-            netEvent = {
-                pivotX,
-                pivotY,
-                poleLen,
-                netRadius,
-                t: 0,
-                swingDir,
-                netAngleStart,
-                netAngleEnd,
-                scooped: false
-            };
-        }
+        // Middle click
         e.preventDefault();
         return;
     }
@@ -386,11 +365,11 @@ const newLocal = 1 / 50;
 function animate(ctx, t, width, height) {
      // draw background first
     // Water background (inside tank)
-    let grad = ctx.createLinearGradient(0,wallW,0,height-wallW);
+    let grad = ctx.createLinearGradient(0, 0, 0, height-wallW);
     grad.addColorStop(0,'#5ec6e6');
     grad.addColorStop(1,'#0a2a3a');
     ctx.fillStyle = grad;
-    ctx.fillRect(wallW,wallW,width-2*wallW,height-2*wallW);
+    ctx.fillRect(wallW, 0, width-2*wallW, height-wallW);
         // Lily pad spawning logic
     if (lilyPads.length < MAX_LILY_PADS && Math.random() < LILY_PAD_SPAWN_CHANCE) {
         // Spawn a lily pad at a random X, floating at the top
@@ -400,31 +379,34 @@ function animate(ctx, t, width, height) {
         let padX = wallW + padW/2 + Math.random()*(width-2*wallW-padW);
         let padY = wallW + padH/2 + Math.random()*8;
         let rot = Math.random()*Math.PI*0.2 - 0.4;
-        lilyPads.push({x: padX, y: padY, w: padW, h: padH, rot});
+        let color = 'hsl(' + (90+Math.random()*30) + ', 60%, 38%)';
+        lilyPads.push({x: padX, y: padY, w: padW, h: padH, rot, color});
     }
 
     // Draw lily pads (float at top)
-    for (let pad of lilyPads) {
-        ctx.save();
-        ctx.translate(pad.x, pad.y);
-        ctx.rotate(pad.rot + Math.sin(t*0.1+pad.x*0.01)*0.08);
-        // Perspective skew: compress Y, skew X by a small amount
-        let skew = 0.35; // controls the amount of perspective skew
-        ctx.transform(1, 0, skew, 0.65, 0, 0); // [a, b, c, d, e, f]
-        ctx.beginPath();
-        ctx.ellipse(0, 0, pad.w, pad.h, 0, 0, Math.PI*2);
-        // Notch
-        ctx.moveTo(0,0);
-        ctx.arc(0, 0, pad.w, -Math.PI/8, Math.PI/8, false);
-        ctx.lineTo(0,0);
-        ctx.closePath();
-        ctx.fillStyle = 'hsl(' + (90+Math.random()*30) + ', 60%, 38%)';
-        ctx.globalAlpha = 0.82;
-        ctx.shadowColor = '#1a3a1a';
-        ctx.shadowBlur = 8;
-        ctx.fill();
-        ctx.restore();
-    }
+        for (let pad of lilyPads) {
+            ctx.save();
+            // Animate floating left/right
+            let floatX = pad.x + Math.sin(t*0.22 + pad.x*0.013) * 18;
+            ctx.translate(floatX, pad.y);
+            ctx.rotate(pad.rot + Math.sin(t*0.1+pad.x*0.01)*0.08);
+            // Perspective skew: compress Y, skew X by a small amount
+            let skew = 0.35; // controls the amount of perspective skew
+            ctx.transform(1, 0, skew, 0.65, 0, 0); // [a, b, c, d, e, f]
+            ctx.beginPath();
+            ctx.ellipse(0, 0, pad.w, pad.h, 0, 0, Math.PI*2);
+            // Notch
+            ctx.moveTo(0,0);
+            ctx.arc(0, 0, pad.w, -Math.PI/8, Math.PI/8, false);
+            ctx.lineTo(0,0);
+            ctx.closePath();
+            ctx.fillStyle = pad.color;
+            ctx.globalAlpha = 0.82;
+            ctx.shadowColor = '#1a3a1a';
+            ctx.shadowBlur = 8;
+            ctx.fill();
+            ctx.restore();
+        }
     // Rare random event: cartoon net on a pole swings in from the top
     if (!netEvent && Math.random() < NET_PROBABILITY) {
         // Net pivots from a point off the top of the screen
@@ -836,7 +818,7 @@ function animate(ctx, t, width, height) {
     ctx.globalAlpha = 0.7;
     ctx.fillRect(0,0,wallW,height); // left
     ctx.fillRect(width-wallW,0,wallW,height); // right
-    ctx.fillRect(0,0,width,wallW); // top
+    // ctx.fillRect(0,0,width,wallW); // top (removed)
     ctx.fillRect(0,height-wallW,width,wallW); // bottom
     ctx.restore();
 }
