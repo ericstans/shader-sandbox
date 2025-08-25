@@ -2,10 +2,10 @@
 // Exports: { displayName, animate, onResize }
 
 const displayName = 'Fish Tank';
-
 const EGG_LAYING_PROBABILITY = 1/150;
 const NET_PROBABILITY = 1/2048;
 const NET_SPEED = 1/30000
+const wallW = 10;
 let fish = [];
 let netEvent = null;
 let scoopedFish = [];
@@ -14,6 +14,11 @@ let bubbles = [];
 let causticPhase = 0;
 let tankDecor = null;
 let foodPellets = [];
+// Lily pads
+let lilyPads = [];
+const MAX_LILY_PADS = 5;
+const LILY_PAD_SPAWN_CHANCE = 1/2; // chance per frame
+
 // Add a food pellet at (x, y)
 // Generate static decorations for the tank floor
 function generateTankDecor(width, height, wallW) {
@@ -380,22 +385,46 @@ function drawCaustics(ctx, width, height, t) {
 const newLocal = 1 / 50;
 function animate(ctx, t, width, height) {
      // draw background first
-    // Draw tank walls
-    const wallW = 10;
-    ctx.save();
-    ctx.fillStyle = '#b8e0f8';
-    ctx.globalAlpha = 0.7;
-    ctx.fillRect(0,0,wallW,height); // left
-    ctx.fillRect(width-wallW,0,wallW,height); // right
-    ctx.fillRect(0,0,width,wallW); // top
-    ctx.fillRect(0,height-wallW,width,wallW); // bottom
-    ctx.restore();
     // Water background (inside tank)
     let grad = ctx.createLinearGradient(0,wallW,0,height-wallW);
     grad.addColorStop(0,'#5ec6e6');
     grad.addColorStop(1,'#0a2a3a');
     ctx.fillStyle = grad;
     ctx.fillRect(wallW,wallW,width-2*wallW,height-2*wallW);
+        // Lily pad spawning logic
+    if (lilyPads.length < MAX_LILY_PADS && Math.random() < LILY_PAD_SPAWN_CHANCE) {
+        // Spawn a lily pad at a random X, floating at the top
+        const wallW = 10;
+        let padW = 38 + Math.random()*22;
+        let padH = padW * (0.7 + Math.random()*0.2);
+        let padX = wallW + padW/2 + Math.random()*(width-2*wallW-padW);
+        let padY = wallW + padH/2 + Math.random()*8;
+        let rot = Math.random()*Math.PI*0.2 - 0.4;
+        lilyPads.push({x: padX, y: padY, w: padW, h: padH, rot});
+    }
+
+    // Draw lily pads (float at top)
+    for (let pad of lilyPads) {
+        ctx.save();
+        ctx.translate(pad.x, pad.y);
+        ctx.rotate(pad.rot + Math.sin(t*0.1+pad.x*0.01)*0.08);
+        // Perspective skew: compress Y, skew X by a small amount
+        let skew = 0.35; // controls the amount of perspective skew
+        ctx.transform(1, 0, skew, 0.65, 0, 0); // [a, b, c, d, e, f]
+        ctx.beginPath();
+        ctx.ellipse(0, 0, pad.w, pad.h, 0, 0, Math.PI*2);
+        // Notch
+        ctx.moveTo(0,0);
+        ctx.arc(0, 0, pad.w, -Math.PI/8, Math.PI/8, false);
+        ctx.lineTo(0,0);
+        ctx.closePath();
+        ctx.fillStyle = 'hsl(' + (90+Math.random()*30) + ', 60%, 38%)';
+        ctx.globalAlpha = 0.82;
+        ctx.shadowColor = '#1a3a1a';
+        ctx.shadowBlur = 8;
+        ctx.fill();
+        ctx.restore();
+    }
     // Rare random event: cartoon net on a pole swings in from the top
     if (!netEvent && Math.random() < NET_PROBABILITY) {
         // Net pivots from a point off the top of the screen
@@ -800,6 +829,16 @@ function animate(ctx, t, width, height) {
     if (fishToRemove.size > 0) {
         fish = fish.filter((f, idx) => !fishToRemove.has(idx));
     }
+
+    // Draw tank walls
+    ctx.save();
+    ctx.fillStyle = '#b8e0f8';
+    ctx.globalAlpha = 0.7;
+    ctx.fillRect(0,0,wallW,height); // left
+    ctx.fillRect(width-wallW,0,wallW,height); // right
+    ctx.fillRect(0,0,width,wallW); // top
+    ctx.fillRect(0,height-wallW,width,wallW); // bottom
+    ctx.restore();
 }
 
 function onResize({canvas, ctx, width, height}) {
