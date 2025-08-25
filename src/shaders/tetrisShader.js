@@ -245,8 +245,42 @@ function animate(ctx, t, width, height) {
             }
           }
         }
-        // Prefer fewer gaps, then lower placement, then penalize >1 I-only well
-        let score = -gaps * 1000 + y - (iWells > 1 ? (iWells-1) * 2000 : 0);
+        // If this is an I piece and there is an I-only well, strongly prefer to drop it in the well to clear lines
+        let iClearBonus = 0;
+        if (state.piece.type === 1) { // I piece
+          for (let col = 0; col < COLS; col++) {
+            // Find the first filled cell in this column
+            let top = 0;
+            while (top < ROWS && !testBoard[top][col]) top++;
+            let wellStart = top;
+            let wellEnd = top;
+            while (wellEnd < ROWS && !testBoard[wellEnd][col]) wellEnd++;
+            let isIWell = true;
+            if (wellEnd - wellStart > 0) {
+              for (let row = wellStart; row < wellEnd; row++) {
+                let leftFilled = col === 0 || testBoard[row][col-1];
+                let rightFilled = col === COLS-1 || testBoard[row][col+1];
+                if (!leftFilled || !rightFilled) {
+                  isIWell = false;
+                  break;
+                }
+              }
+              // If this placement puts the I piece vertically in the well and clears lines, give a huge bonus
+              if (isIWell && w === 1 && x === col && rot % 2 === 0) {
+                // Check if the I piece fills the well from bottom up
+                let clears = 0;
+                for (let row = wellEnd-4; row < wellEnd; row++) {
+                  if (row >= 0 && row < ROWS && !testBoard[row][col]) clears++;
+                }
+                if (clears === 4) {
+                  iClearBonus = 1000000;
+                }
+              }
+            }
+          }
+        }
+        // Prefer fewer gaps, then lower placement, then penalize >1 I-only well, then huge bonus for I-well clear
+        let score = -gaps * 1000 + y - (iWells > 1 ? (iWells-1) * 2000 : 0) + iClearBonus;
         if (score > bestScore) {
           bestScore = score;
           best = { x, rot, y };
