@@ -644,7 +644,6 @@ function animate(ctx, t, width, height) {
                 f.scoopedTime = now;
                 f.x = netX + (Math.random() - 0.5) * netEvent.netRadius * 0.7;
                 f.y = netY + (Math.random() - 0.5) * netEvent.netRadius * 1.5;
-                scoopedThisFrame = true;
             }
         }
         // End event after swing
