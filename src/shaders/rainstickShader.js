@@ -1,4 +1,6 @@
 // Minimum speed required to make sound
+let BANDPASS_Q = 18;
+
 const MIN_SOUND_SPEED = 0.18;
 // rainstickShader.js
 // 2D rainstick simulation with interactive rotation and sound
@@ -16,6 +18,7 @@ const REST_THRESHOLD = 0.08;
 
 let state = null;
 let uiElements = null;
+let SOUND_TYPE = 'white';
 let lastAnimateTime = 0;
 // Remove UI cleanup timeout logic; use onChangedAway instead
 
@@ -52,6 +55,7 @@ function reset() {
     pins,
     pebbles,
     angle: 0,
+    BANDPASS_Q: 18,
     dragging: false,
     dragStart: null,
     angleStart: 0,
@@ -76,8 +80,51 @@ function playSound(volume, speed=1) {
   const sampleRate = ctx.sampleRate;
   const buffer = ctx.createBuffer(1, sampleRate * duration, sampleRate);
   const data = buffer.getChannelData(0);
-  for (let i = 0; i < data.length; i++) {
-    data[i] = (Math.random() * 2 - 1) * 0.7;
+  // Generate noise based on SOUND_TYPE
+  if (SOUND_TYPE === 'white') {
+    for (let i = 0; i < data.length; i++) {
+      data[i] = (Math.random() * 2 - 1) * 0.7;
+    }
+  } else if (SOUND_TYPE === 'pink') {
+    // Pink noise (simple filter)
+    let b0=0, b1=0, b2=0, b3=0, b4=0, b5=0, b6=0;
+    for (let i = 0; i < data.length; i++) {
+      let white = Math.random() * 2 - 1;
+      b0 = 0.99886 * b0 + white * 0.0555179;
+      b1 = 0.99332 * b1 + white * 0.0750759;
+      b2 = 0.96900 * b2 + white * 0.1538520;
+      b3 = 0.86650 * b3 + white * 0.3104856;
+      b4 = 0.55000 * b4 + white * 0.5329522;
+      b5 = -0.7616 * b5 - white * 0.0168980;
+      data[i] = b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362;
+      data[i] *= 0.11; // scale
+      b6 = white * 0.115926;
+    }
+  } else if (SOUND_TYPE === 'brown') {
+    // Brownian noise
+    let lastOut = 0.0;
+    for (let i = 0; i < data.length; i++) {
+      let white = Math.random() * 2 - 1;
+      lastOut = (lastOut + (0.02 * white)) / 1.02;
+      data[i] = lastOut * 3.5;
+    }
+  } else if (SOUND_TYPE === 'metallic') {
+    // White noise + fast sine mod
+    for (let i = 0; i < data.length; i++) {
+      let t = i / sampleRate;
+      data[i] = (Math.random() * 2 - 1) * 0.7 * Math.sin(2 * Math.PI * 800 * t);
+    }
+  } else if (SOUND_TYPE === 'glass') {
+    // White noise + slow sine mod
+    for (let i = 0; i < data.length; i++) {
+      let t = i / sampleRate;
+      data[i] = (Math.random() * 2 - 1) * 0.7 * Math.sin(2 * Math.PI * 200 * t);
+    }
+  } else {
+    // Default to white
+    for (let i = 0; i < data.length; i++) {
+      data[i] = (Math.random() * 2 - 1) * 0.7;
+    }
   }
   const noise = ctx.createBufferSource();
   noise.buffer = buffer;
@@ -88,7 +135,7 @@ function playSound(volume, speed=1) {
   let minF = 1200, maxF = 5000;
   let freq = minF + Math.min(1, speed/6) * (maxF - minF) + Math.random() * 100;
   bp.frequency.value = freq;
-  bp.Q.value = 18;
+  bp.Q.value = BANDPASS_Q;
   // Gain
   const g = ctx.createGain();
   g.gain.value = 0.08 * volume * scale;
@@ -103,12 +150,14 @@ function playSound(volume, speed=1) {
 }
 
 export function onChangedAway() {
-  // Remove Balls slider and label UI immediately
-  if (uiElements && uiElements.slider && uiElements.slider.parentNode) {
-    uiElements.slider.parentNode.removeChild(uiElements.slider);
-  }
-  if (uiElements && uiElements.label && uiElements.label.parentNode) {
-    uiElements.label.parentNode.removeChild(uiElements.label);
+  // Remove Balls slider, label, sound dropdown, and Q slider UI immediately
+  if (uiElements) {
+    if (uiElements.slider && uiElements.slider.parentNode) uiElements.slider.parentNode.removeChild(uiElements.slider);
+    if (uiElements.label && uiElements.label.parentNode) uiElements.label.parentNode.removeChild(uiElements.label);
+    if (uiElements.soundDropdown && uiElements.soundDropdown.parentNode) uiElements.soundDropdown.parentNode.removeChild(uiElements.soundDropdown);
+    if (uiElements.soundLabel && uiElements.soundLabel.parentNode) uiElements.soundLabel.parentNode.removeChild(uiElements.soundLabel);
+    if (uiElements.qSlider && uiElements.qSlider.parentNode) uiElements.qSlider.parentNode.removeChild(uiElements.qSlider);
+    if (uiElements.qLabel && uiElements.qLabel.parentNode) uiElements.qLabel.parentNode.removeChild(uiElements.qLabel);
   }
   uiElements = null;
 }
@@ -119,17 +168,27 @@ function animate(ctx, t, width, height) {
     ctx._rainstickW = width;
     ctx._rainstickH = height;
   }
-  // UI code moved to animate()
-  // --- UI: Add slider for number of balls ---
+  // --- UI: Add slider for number of balls, dropdown for sound type, and slider for bandpass Q ---
   if (uiElements && uiElements.slider) {
     uiElements.slider.value = NUM_PEBBLES;
     uiElements.label.textContent = `Balls: ${NUM_PEBBLES}`;
+    if (uiElements.soundDropdown) {
+      uiElements.soundDropdown.value = SOUND_TYPE;
+    }
+    if (uiElements.qSlider) {
+      uiElements.qSlider.value = BANDPASS_Q;
+      uiElements.qLabel.textContent = `Q: ${BANDPASS_Q}`;
+    }
   }
-  if (!uiElements || !uiElements.slider || !document.body.contains(uiElements.slider)) {
+  if (!uiElements || !uiElements.slider || !document.body.contains(uiElements.slider) || !uiElements.soundDropdown || !document.body.contains(uiElements.soundDropdown) || !uiElements.qSlider || !document.body.contains(uiElements.qSlider)) {
     // Remove old UI if present
-    if (uiElements && uiElements.slider && uiElements.slider.parentNode) {
-      uiElements.slider.parentNode.removeChild(uiElements.slider);
-      uiElements.label.parentNode.removeChild(uiElements.label);
+    if (uiElements) {
+      if (uiElements.slider && uiElements.slider.parentNode) uiElements.slider.parentNode.removeChild(uiElements.slider);
+      if (uiElements.label && uiElements.label.parentNode) uiElements.label.parentNode.removeChild(uiElements.label);
+      if (uiElements.soundDropdown && uiElements.soundDropdown.parentNode) uiElements.soundDropdown.parentNode.removeChild(uiElements.soundDropdown);
+      if (uiElements.soundLabel && uiElements.soundLabel.parentNode) uiElements.soundLabel.parentNode.removeChild(uiElements.soundLabel);
+      if (uiElements.qSlider && uiElements.qSlider.parentNode) uiElements.qSlider.parentNode.removeChild(uiElements.qSlider);
+      if (uiElements.qLabel && uiElements.qLabel.parentNode) uiElements.qLabel.parentNode.removeChild(uiElements.qLabel);
     }
     // Create new UI
     const slider = document.createElement('input');
@@ -149,16 +208,72 @@ function animate(ctx, t, width, height) {
     label.style.top = (ctx.canvas.getBoundingClientRect().top + 18) + 'px';
     label.style.zIndex = 1000;
     label.style.color = 'white';
+    // --- Sound type dropdown ---
+    const soundDropdown = document.createElement('select');
+    soundDropdown.style.position = 'absolute';
+    soundDropdown.style.left = (ctx.canvas.getBoundingClientRect().left + 20) + 'px';
+    soundDropdown.style.top = (ctx.canvas.getBoundingClientRect().top + 50) + 'px';
+    soundDropdown.style.zIndex = 1000;
+    const soundLabel = document.createElement('span');
+    soundLabel.textContent = 'Sound: ';
+    soundLabel.style.position = 'absolute';
+    soundLabel.style.left = (ctx.canvas.getBoundingClientRect().left + 150) + 'px';
+    soundLabel.style.top = (ctx.canvas.getBoundingClientRect().top + 48) + 'px';
+    soundLabel.style.zIndex = 1000;
+    soundLabel.style.color = 'white';
+    const options = [
+      {value: 'white', label: 'White Noise'},
+      {value: 'pink', label: 'Pink Noise'},
+      {value: 'brown', label: 'Brown Noise'},
+      {value: 'metallic', label: 'Metallic'},
+      {value: 'glass', label: 'Glass'},
+    ];
+    for (const opt of options) {
+      const o = document.createElement('option');
+      o.value = opt.value;
+      o.textContent = opt.label;
+      soundDropdown.appendChild(o);
+    }
+    soundDropdown.value = SOUND_TYPE;
+    soundDropdown.addEventListener('change', e => {
+      SOUND_TYPE = soundDropdown.value;
+    });
+    // --- Q slider ---
+    const qSlider = document.createElement('input');
+    qSlider.type = 'range';
+    qSlider.min = 1;
+    qSlider.max = 40;
+    qSlider.value = BANDPASS_Q;
+    qSlider.step = 0.1;
+    qSlider.style.position = 'absolute';
+    qSlider.style.left = (ctx.canvas.getBoundingClientRect().left + 20) + 'px';
+    qSlider.style.top = (ctx.canvas.getBoundingClientRect().top + 80) + 'px';
+    qSlider.style.zIndex = 1000;
+    qSlider.style.width = '120px';
+    const qLabel = document.createElement('span');
+    qLabel.textContent = `Q: ${BANDPASS_Q}`;
+    qLabel.style.position = 'absolute';
+    qLabel.style.left = (ctx.canvas.getBoundingClientRect().left + 150) + 'px';
+    qLabel.style.top = (ctx.canvas.getBoundingClientRect().top + 78) + 'px';
+    qLabel.style.zIndex = 1000;
+    qLabel.style.color = 'white';
+    qSlider.addEventListener('input', e => {
+      BANDPASS_Q = parseFloat(qSlider.value);
+      qLabel.textContent = `Q: ${BANDPASS_Q}`;
+    });
     document.body.appendChild(slider);
     document.body.appendChild(label);
+    document.body.appendChild(soundDropdown);
+    document.body.appendChild(soundLabel);
+    document.body.appendChild(qSlider);
+    document.body.appendChild(qLabel);
     slider.addEventListener('input', e => {
       window.NUM_PEBBLES = parseInt(slider.value);
       label.textContent = `Balls: ${slider.value}`;
-      // Update global and local NUM_PEBBLES, then reset
       NUM_PEBBLES = parseInt(slider.value);
       reset();
     });
-    uiElements = {slider, label};
+    uiElements = {slider, label, soundDropdown, soundLabel, qSlider, qLabel};
   }
   // Keep UI in sync with canvas position
   if (uiElements && uiElements.slider) {
@@ -167,6 +282,22 @@ function animate(ctx, t, width, height) {
     uiElements.slider.style.top = (rect.top + 20) + 'px';
     uiElements.label.style.left = (rect.left + 150) + 'px';
     uiElements.label.style.top = (rect.top + 18) + 'px';
+    if (uiElements.soundDropdown) {
+      uiElements.soundDropdown.style.left = (rect.left + 20) + 'px';
+      uiElements.soundDropdown.style.top = (rect.top + 50) + 'px';
+    }
+    if (uiElements.soundLabel) {
+      uiElements.soundLabel.style.left = (rect.left + 150) + 'px';
+      uiElements.soundLabel.style.top = (rect.top + 48) + 'px';
+    }
+    if (uiElements.qSlider) {
+      uiElements.qSlider.style.left = (rect.left + 20) + 'px';
+      uiElements.qSlider.style.top = (rect.top + 80) + 'px';
+    }
+    if (uiElements.qLabel) {
+      uiElements.qLabel.style.left = (rect.left + 150) + 'px';
+      uiElements.qLabel.style.top = (rect.top + 78) + 'px';
+    }
   }
 
 
