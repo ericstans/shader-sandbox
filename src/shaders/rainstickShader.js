@@ -1,7 +1,7 @@
 // Minimum speed required to make sound
 let BANDPASS_Q = 18;
 
-const MIN_SOUND_SPEED = 0.18;
+const MIN_SOUND_SPEED = 0.1;
 // rainstickShader.js
 // 2D rainstick simulation with interactive rotation and sound
 
@@ -9,8 +9,9 @@ const displayName = 'Rainstick';
 
 const STICK_LENGTH = 500;
 const STICK_RADIUS = 30;
-const NUM_PINS = 60;
-let NUM_PEBBLES = 2;
+const NUM_PINS = 80;
+const PIN_RADIUS = 2;
+let NUM_PEBBLES = 12;
 const GRAVITY = 0.3;
 const FRICTION = 0.96;
 const REST_THRESHOLD = 0.08;
@@ -29,10 +30,12 @@ function reset() {
   const COLS = Math.ceil(NUM_PINS / ROWS);
   for (let row = 0; row < ROWS; row++) {
     for (let col = 0; col < COLS; col++) {
+      // Skip the first and last column of pegs
+      if (col === 0 || col === COLS - 1) continue;
       if (pins.length >= NUM_PINS) break;
       // Evenly spaced, but with a small random jitter
       let x = (col + 0.3) * (STICK_LENGTH / COLS) + (Math.random() * 4) * 6;
-      let y = (row + 0.5) * ((STICK_RADIUS * 2) / ROWS) //+ (Math.random() - 0.5) * 4;
+      let y = (row + 0.5) * ((STICK_RADIUS * 2) / ROWS);
       pins.push({x, y});
     }
   }
@@ -49,7 +52,7 @@ function reset() {
     } else {
       y = Math.random() * (STICK_RADIUS - 3) + STICK_RADIUS + 3; // lower half
     }
-    pebbles.push({x, y, vx: 0, vy: 0});
+    pebbles.push({x, y, vx: 0, vy: 0, lastPin: -1});
   }
   state = {
     pins,
@@ -109,16 +112,30 @@ function playSound(volume, speed=1) {
       data[i] = lastOut * 3.5;
     }
   } else if (SOUND_TYPE === 'metallic') {
-    // White noise + fast sine mod
+    // Inharmonic partials + noise for a bell-like metallic sound
+    const partials = [1, 2.32, 2.9, 4.05, 5.43];
+    const baseFreq = 700 + Math.random() * 200;
     for (let i = 0; i < data.length; i++) {
       let t = i / sampleRate;
-      data[i] = (Math.random() * 2 - 1) * 0.7 * Math.sin(2 * Math.PI * 800 * t);
+      let val = 0;
+      for (let j = 0; j < partials.length; j++) {
+        val += Math.sin(2 * Math.PI * baseFreq * partials[j] * t) * Math.exp(-t * (6 + j * 2));
+      }
+      val += (Math.random() * 2 - 1) * 0.15 * Math.exp(-t * 8);
+      data[i] = val * 0.5;
     }
   } else if (SOUND_TYPE === 'glass') {
-    // White noise + slow sine mod
+    // Harmonic partials with shimmer for a glassy sound
+    const baseFreq = 400 + Math.random() * 80;
     for (let i = 0; i < data.length; i++) {
       let t = i / sampleRate;
-      data[i] = (Math.random() * 2 - 1) * 0.7 * Math.sin(2 * Math.PI * 200 * t);
+      let val = 0;
+      for (let h = 1; h <= 6; h++) {
+        let mod = 1 + 0.01 * Math.sin(2 * Math.PI * 3 * t + h);
+        val += Math.sin(2 * Math.PI * baseFreq * h * mod * t) * Math.exp(-t * (2 + h * 0.7));
+      }
+      val += (Math.random() * 2 - 1) * 0.05 * Math.exp(-t * 6);
+      data[i] = val * 0.4;
     }
   } else {
     // Default to white
@@ -306,6 +323,7 @@ function animate(ctx, t, width, height) {
   if (!window._rainstickEvents) {
     window._rainstickEvents = true;
     ctx.canvas.addEventListener('mousedown', e => {
+      if (e.button !== 0) return; // Only left click
       state.dragging = true;
       state.dragStart = {x: e.clientX, y: e.clientY};
       state.angleStart = state.angle;
@@ -339,7 +357,21 @@ function animate(ctx, t, width, height) {
     // Improved wall collision
     const WALL_THRESHOLD = 0.5;
     if (pebble.y < 0) { pebble.y = 0; pebble.vy *= -0.2; }
-    if (pebble.y > STICK_RADIUS*2) { pebble.y = STICK_RADIUS*2; pebble.vy *= -0.2; }
+    if (pebble.y > STICK_RADIUS*2) {
+      pebble.y = STICK_RADIUS*2;
+      pebble.vy *= -0.2;
+    }
+
+    // Extra damping near the bottom to help balls settle
+    if (pebble.y > STICK_RADIUS*2 - 2 && Math.abs(pebble.vy) < 0.5 && Math.abs(pebble.vx) < 0.5) {
+      pebble.vx *= 0.7;
+      pebble.vy *= 0.7;
+      // If very slow, stop completely
+      if (Math.abs(pebble.vy) < 0.08 && Math.abs(pebble.vx) < 0.08) {
+        pebble.vx = 0;
+        pebble.vy = 0;
+      }
+    }
     // Center wall (lengthwise)
     if (Math.abs(pebble.y - STICK_RADIUS) < 2.5) {
       // If pebble is about to cross the wall, push it back
@@ -360,12 +392,13 @@ function animate(ctx, t, width, height) {
       if (pebble.x > STICK_LENGTH) { pebble.x = STICK_LENGTH; pebble.vx *= -0.2; }
     }
     // Collide with pins
-    for (let pin of state.pins) {
+    for (let pinIdx = 0; pinIdx < state.pins.length; pinIdx++) {
+      let pin = state.pins[pinIdx];
       let dx = pebble.x - pin.x;
       let dy = pebble.y - pin.y;
       let dist = Math.sqrt(dx*dx + dy*dy);
       if (dist < 6) {
-        // Only play sound if speed before bounce is above threshold
+        // Only play sound if speed before bounce is above threshold and not hitting same pin as last time
         let preSpeed = Math.sqrt(pebble.vx*pebble.vx + pebble.vy*pebble.vy);
         // Simple bounce with energy loss
         let nx = dx / (dist || 1);
@@ -375,9 +408,16 @@ function animate(ctx, t, width, height) {
         // Slow down the pebble to simulate energy loss
         pebble.vx *= 0.5;
         pebble.vy *= 0.5;
-        if (preSpeed > MIN_SOUND_SPEED) {
-          state.soundQueue.push({x: pebble.x, y: pebble.y, t: performance.now(), speed: preSpeed});
+        if (preSpeed > MIN_SOUND_SPEED && pebble.lastPin !== pinIdx) {
+          // Map speed to velocity: min 0.25, max 1.0
+          let minV = 0.25, maxV = 1.0, maxSpeed = 6;
+          let velocity = minV + Math.min(1, (preSpeed - MIN_SOUND_SPEED) / (maxSpeed - MIN_SOUND_SPEED)) * (maxV - minV);
+          state.soundQueue.push({x: pebble.x, y: pebble.y, t: performance.now(), speed: velocity});
+          pebble.lastPin = pinIdx;
         }
+      } else if (pebble.lastPin === pinIdx) {
+        // Reset lastPin if no longer colliding
+        pebble.lastPin = -1;
       }
     }
     // Collide with other pebbles
@@ -449,7 +489,7 @@ function animate(ctx, t, width, height) {
   // Draw pins
   for (let pin of state.pins) {
     ctx.beginPath();
-    ctx.arc(pin.x, pin.y, 3, 0, 2*Math.PI);
+    ctx.arc(pin.x, pin.y, PIN_RADIUS, 0, 2*Math.PI);
     ctx.fillStyle = '#333';
     ctx.fill();
   }
