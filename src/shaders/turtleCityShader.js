@@ -20,6 +20,25 @@ function animate(ctx, t, width, height) {
     const headR = shellW * 0.18;
     const legW = shellW * 0.18;
     const legH = shellH * 0.7;
+    // Draw back feet (behind shell and city), offset to one side, rotated outward
+    for (let i = 0; i < 2; i++) {
+        let side = i === 0 ? -1 : 1;
+        // Offset: one leg further left, one further right, and both slightly back
+        let lx = centerX + side * shellW * 0.3 + (side === -1 ? -shellW * 0.08 : shellW * 0.12);
+        let ly = baseY + shellH * 0.8;
+        // Outward rotation angle (radians): left foot rotates -18deg, right foot +18deg
+        let angle = -1 * side * Math.PI / 10;
+        ctx.save();
+        ctx.beginPath();
+        ctx.ellipse(lx, ly, legW * 0.38, legH * 0.55, angle, 0, Math.PI * 2);
+        ctx.fillStyle = '#3a5c3a';
+        ctx.shadowColor = '#0007';
+        ctx.shadowBlur = 4;
+        ctx.globalAlpha = 0.7;
+        ctx.fill();
+        ctx.restore();
+    }
+    
 
 
     // Generate city layout and cache it only if needed
@@ -210,7 +229,7 @@ function animate(ctx, t, width, height) {
     ctx.fill();
     ctx.restore();
 
-    // Legs (front view, animated)
+    // Legs (front view, animated, rotated outward)
     for (let i = 0; i < 4; i++) {
         let side = i % 2 === 0 ? -1 : 1;
         let front = i < 2 ? 1 : -1;
@@ -218,9 +237,11 @@ function animate(ctx, t, width, height) {
         let legSwing = Math.sin(legPhase) * shellH * 0.13 * front;
         let lx = centerX + side * shellW * 0.32;
         let ly = baseY + shellH * 0.7 + legSwing;
+        // Outward rotation angle (radians): left legs -15deg, right legs +15deg
+        let angle = -1 * side * Math.PI / 12;
         ctx.save();
         ctx.beginPath();
-        ctx.ellipse(lx, ly, legW * 0.5, legH, 0, 0, Math.PI * 2);
+        ctx.ellipse(lx, ly, legW * 0.5, legH, angle, 0, Math.PI * 2);
         ctx.fillStyle = '#4a6c4a';
         ctx.shadowColor = '#000a';
         ctx.shadowBlur = 6;
