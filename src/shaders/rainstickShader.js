@@ -16,6 +16,8 @@ const REST_THRESHOLD = 0.08;
 
 let state = null;
 let uiElements = null;
+let lastAnimateTime = 0;
+// Remove UI cleanup timeout logic; use onChangedAway instead
 
 function reset() {
   // Pins are distributed in a slightly irregular grid
@@ -100,6 +102,17 @@ function playSound(volume, speed=1) {
   noise.stop(ctx.currentTime + duration);
 }
 
+export function onChangedAway() {
+  // Remove Balls slider and label UI immediately
+  if (uiElements && uiElements.slider && uiElements.slider.parentNode) {
+    uiElements.slider.parentNode.removeChild(uiElements.slider);
+  }
+  if (uiElements && uiElements.label && uiElements.label.parentNode) {
+    uiElements.label.parentNode.removeChild(uiElements.label);
+  }
+  uiElements = null;
+}
+
 function animate(ctx, t, width, height) {
   if (!state || ctx._rainstickW !== width || ctx._rainstickH !== height) {
     reset();
@@ -155,6 +168,9 @@ function animate(ctx, t, width, height) {
     uiElements.label.style.left = (rect.left + 150) + 'px';
     uiElements.label.style.top = (rect.top + 18) + 'px';
   }
+
+
+
   // Handle mouse drag for rotation
   if (!window._rainstickEvents) {
     window._rainstickEvents = true;
@@ -319,7 +335,9 @@ function animate(ctx, t, width, height) {
   ctx.restore();
 }
 
+
 export default {
   displayName,
   animate,
+  onChangedAway
 };

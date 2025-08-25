@@ -1,7 +1,7 @@
 // Organic Growth Shader: Animated branching growth from a central point
 // Exports: { displayName, animate, onResize }
 
-const displayName = 'Organic Growth';
+const displayName = 'Organic Growth (Elise)';
 
 let growthStart = null;
 let growthDuration = 40000; // ms (40 seconds)

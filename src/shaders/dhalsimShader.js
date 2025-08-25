@@ -1,7 +1,7 @@
 // Dhalsim Shader: Animated portrait of Dhalsim from Street Fighter
 // Exports: { displayName, animate, onResize }
 
-const displayName = 'Dhalsim (Street Fighter)';
+const displayName = 'Dhalsim (Berto)';
 
 let startTime = null;
 

@@ -1,7 +1,7 @@
 // Giant Turtle City Shader: A giant turtle with a city on its back
 // Exports: { displayName, animate, onResize }
 
-const displayName = 'Turtle City';
+const displayName = 'Turtle City (Berto)';
 
 
 let startTime = null;

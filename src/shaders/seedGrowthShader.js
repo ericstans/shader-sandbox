@@ -1,7 +1,7 @@
 // Seed Growth Shader: Animated seed sprouting roots and branches
 // Exports: { displayName, animate, onResize }
 
-const displayName = 'Seed Growth';
+const displayName = 'Seed Growth (Elise)';
 
 let growthStart = null;
 let growthDuration = 40000; // ms (40 seconds)

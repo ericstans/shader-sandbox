@@ -256,16 +256,16 @@ const shaders = [
 	{shader: gridGlyphShader3, displayName: 'Grid Glyphs 3'},
 		{shader: gridGlyphShader4, displayName: 'Grid Glyphs 4'},
 		{shader: fishTankShader, displayName: 'Fish Tank'},
-		{shader: seedGrowthShader, displayName: 'Seed Growth'},
-			{shader: organicGrowthShader, displayName: 'Organic Growth'},
-			{shader: turtleCityShader, displayName: 'Turtle City'},
+		seedGrowthShader,
+			organicGrowthShader,
+			turtleCityShader,
 		dhalsimShader,
 		cascadingShimmerShader,
 		digDugAntsShader,
 			{shader: plasmaPongShader, displayName: 'Plasma Pong'},
 			{shader: tetrisShader, displayName: 'Tetris'},
 		{shader: puyoShader, displayName: 'Puyo Puyo'},
-			{shader: rainstickShader, displayName: 'Rainstick'},
+			{shader: rainstickShader, displayName: 'Rainstick'}
 
 ];
 
@@ -303,27 +303,36 @@ if (select) {
 	} else {
 		canvas.onclick = null;
 	}
-	select.addEventListener('change', () => {
-		currentShader = parseInt(select.value, 10) || 0;
-		// Reset zoom and pan to default
-		viewZoom = 1;
-		viewOffsetX = 0;
-		viewOffsetY = 0;
-		// Remove any previous click handler
-		canvas.onclick = null;
-		// If the shader module provides a click handler, set it
-		if (shaders[currentShader] && shaders[currentShader].shader && shaders[currentShader].shader.onClick) {
-			canvas.onclick = (e) => shaders[currentShader].shader.onClick(e, { canvas, ctx, width, height });
-		} else if (shaders[currentShader] && shaders[currentShader].onClick) {
-			canvas.onclick = (e) => shaders[currentShader].onClick(e, { canvas, ctx, width, height });
-		}
-		// On shader switch, initialize state for the new shader
-		if (shaders[currentShader] && shaders[currentShader].shader && shaders[currentShader].shader.onResize) {
-			shaders[currentShader].shader.onResize({ canvas, ctx, width, height });
-		} else if (shaders[currentShader] && shaders[currentShader].onResize) {
-			shaders[currentShader].onResize({ canvas, ctx, width, height });
-		}
-	});
+		let previousShader = currentShader;
+		select.addEventListener('change', () => {
+			// Call onChangedAway on the previous shader if it exists
+			if (shaders[previousShader]) {
+				const s = shaders[previousShader].shader || shaders[previousShader];
+				if (typeof s.onChangedAway === 'function') {
+					s.onChangedAway();
+				}
+			}
+			currentShader = parseInt(select.value, 10) || 0;
+			previousShader = currentShader;
+			// Reset zoom and pan to default
+			viewZoom = 1;
+			viewOffsetX = 0;
+			viewOffsetY = 0;
+			// Remove any previous click handler
+			canvas.onclick = null;
+			// If the shader module provides a click handler, set it
+			if (shaders[currentShader] && shaders[currentShader].shader && shaders[currentShader].shader.onClick) {
+				canvas.onclick = (e) => shaders[currentShader].shader.onClick(e, { canvas, ctx, width, height });
+			} else if (shaders[currentShader] && shaders[currentShader].onClick) {
+				canvas.onclick = (e) => shaders[currentShader].onClick(e, { canvas, ctx, width, height });
+			}
+			// On shader switch, initialize state for the new shader
+			if (shaders[currentShader] && shaders[currentShader].shader && shaders[currentShader].shader.onResize) {
+				shaders[currentShader].shader.onResize({ canvas, ctx, width, height });
+			} else if (shaders[currentShader] && shaders[currentShader].onResize) {
+				shaders[currentShader].onResize({ canvas, ctx, width, height });
+			}
+		});
 }
 
 function render(time) {
