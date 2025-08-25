@@ -3,9 +3,11 @@
 
 const displayName = 'Fish Tank';
 const EGG_LAYING_PROBABILITY = 1 / 150;
-const NET_PROBABILITY = 1 / 2048;
+const NET_PROBABILITY = 1 / 25000;
 const NET_SPEED = 1 / 30000
-const wallW = 10;
+const MAX_LILY_PADS = 8;
+const LILY_PAD_SPAWN_CHANCE = 1 / 3000; // chance per frame
+const WALL_WIDTH = 10;
 let fish = [];
 let netEvent = null;
 let scoopedFish = [];
@@ -16,20 +18,18 @@ let tankDecor = null;
 let foodPellets = [];
 // Lily pads
 let lilyPads = [];
-const MAX_LILY_PADS = 8;
-const LILY_PAD_SPAWN_CHANCE = 1 / 3 //1/3000; // chance per frame
 
 // Add a food pellet at (x, y)
 // Generate static decorations for the tank floor
-function generateTankDecor(width, height, wallW) {
+function generateTankDecor(width, height, WALL_WIDTH) {
     // Generate static decorations for the tank floor
     // --- Continuous gravel band (static, cached) ---
     let gravelBand = [];
-    let gravelBandY = height - wallW - 10;
+    let gravelBandY = height - WALL_WIDTH - 10;
     let bandHeight = 18 * 2;
-    let bandCount = Math.floor((width - 2 * wallW) / 7);
+    let bandCount = Math.floor((width - 2 * WALL_WIDTH) / 7);
     for (let i = 0; i < bandCount; i++) {
-        let gx = wallW + 3 + i * 7 + Math.random() * 2;
+        let gx = WALL_WIDTH + 3 + i * 7 + Math.random() * 2;
         let gy = gravelBandY + Math.random() * bandHeight;
         let gr = (3.5 + Math.random() * 2.5) * 2;
         gravelBand.push({
@@ -46,7 +46,7 @@ function generateTankDecor(width, height, wallW) {
     for (let i = 0; i < 60; i++) {
         gravel.push({
             x: 20 + Math.random() * (width - 40),
-            y: height - wallW - 8 - Math.random() * 8 * 2,
+            y: height - WALL_WIDTH - 8 - Math.random() * 8 * 2,
             r: (2.2 + Math.random() * 1.8) * 2,
             color: `hsl(${35 + Math.random() * 30},${40 + Math.random() * 30}%,${60 + Math.random() * 20}%)`,
             alpha: 0.45 + Math.random() * 0.25
@@ -56,7 +56,7 @@ function generateTankDecor(width, height, wallW) {
     for (let i = 0; i < 5; i++) {
         rocks.push({
             x: 30 + Math.random() * (width - 60),
-            y: height - wallW - 12 - Math.random() * 10 * 2,
+            y: height - WALL_WIDTH - 12 - Math.random() * 10 * 2,
             rx: (12 + Math.random() * 10) * 2,
             ry: (7 + Math.random() * 6) * 2,
             rot: Math.random() * Math.PI,
@@ -68,7 +68,7 @@ function generateTankDecor(width, height, wallW) {
     for (let i = 0; i < (5 + Math.random() * 10); i++) {
         plants.push({
             x: 25 + Math.random() * (width - 50),
-            baseY: height - wallW - 10,
+            baseY: height - WALL_WIDTH - 10,
             h: (28 + Math.random() * 200) * 2,
             color: `hsl(${90 + Math.random() * 60},${40 + Math.random() * 40}%,${30 + Math.random() * 30}%)`,
             lw: (2 + Math.random() * 3) * 2
@@ -121,14 +121,31 @@ function onClick(e, { canvas, ctx, width, height }) {
     let x = (typeof window.viewZoom === 'number' ? (rawX - (window.viewOffsetX || 0)) / (window.viewZoom || 1) : rawX);
     let y = (typeof window.viewZoom === 'number' ? (rawY - (window.viewOffsetY || 0)) / (window.viewZoom || 1) : rawY);
     // Only add food or fish if inside tank (not on wall)
-    const wallW = 10;
-    if (e.button === 1) {
-        // Middle click
-        e.preventDefault();
-        return;
-    }
-    if (x > wallW && x < width-wallW && y > wallW && y < height-wallW) {
-        if (e.shiftKey) {
+    if (x > WALL_WIDTH && x < width-WALL_WIDTH && y > WALL_WIDTH && y < height-WALL_WIDTH) {
+        if (e.ctrlKey) {
+            // Ctrl-click: start a net event
+            if (!netEvent) {
+                let pivotX = Math.random() * (width * 0.7) + width * 0.15;
+                let pivotY = -height * 0.5 - 60;
+                let poleLenBase = height * 0.8;
+                let poleLen = poleLenBase * (Math.random() * 1.5);
+                let netRadius = 60 + Math.random() * 40;
+                let netAngleStart = 0;
+                let netAngleEnd = 180;
+                let swingDir = Math.random() < 0.5 ? 1 : -1;
+                netEvent = {
+                    pivotX,
+                    pivotY,
+                    poleLen,
+                    netRadius,
+                    t: 0,
+                    swingDir,
+                    netAngleStart,
+                    netAngleEnd,
+                    scooped: false
+                };
+            }
+        } else if (e.shiftKey) {
             // Add a fish at this location (random species)
             if (typeof resetFish === 'function') {
                 // Use the same speciesList as in resetFish
@@ -499,19 +516,19 @@ function animate(ctx, t, width, height) {
     ctx.save();
     // draw background first
     // Water background (inside tank)
-    let grad = ctx.createLinearGradient(0, 0, 0, height - wallW);
+    let grad = ctx.createLinearGradient(0, 0, 0, height - WALL_WIDTH);
     grad.addColorStop(0, '#5ec6e6');
     grad.addColorStop(1, '#0a2a3a');
     ctx.fillStyle = grad;
-    ctx.fillRect(wallW, 0, width - 2 * wallW, height - wallW);
+    ctx.fillRect(WALL_WIDTH, 0, width - 2 * WALL_WIDTH, height - WALL_WIDTH);
     // Lily pad spawning logic
     if (lilyPads.length < MAX_LILY_PADS && Math.random() < LILY_PAD_SPAWN_CHANCE) {
         // Spawn a lily pad at a random X, floating at the top
-        const wallW = 10;
+        const WALL_WIDTH = 10;
         let padW = 38 + Math.random() * 22;
         let padH = padW * (0.7 + Math.random() * 0.2);
-        let padX = wallW + padW / 2 + Math.random() * (width - 2 * wallW - padW);
-        let padY = wallW + padH / 2 + Math.random() * 8;
+        let padX = WALL_WIDTH + padW / 2 + Math.random() * (width - 2 * WALL_WIDTH - padW);
+        let padY = WALL_WIDTH + padH / 2 + Math.random() * 8;
         let rot = Math.random() * Math.PI * 0.2 - 0.4;
         let color = 'hsl(' + (90 + Math.random() * 30) + ', 60%, 38%)';
     let skew = Math.random() * 0.2 - 0.1;
@@ -524,6 +541,25 @@ function animate(ctx, t, width, height) {
     }
 
     let surfaceH = 50;
+    // Fill above the highest wavy line with black
+    let highestY = 10; // yBase of first wavy line
+    let waveTop = [];
+    for (let x = WALL_WIDTH; x <= width - WALL_WIDTH; x += 1) {
+        let y = highestY + Math.sin((x/32) + t*0.8) * 3.5 + Math.cos((x/18) - t*0.5) * 1.2;
+        waveTop.push({x, y});
+    }
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(WALL_WIDTH, 0);
+    for (let i = 0; i < waveTop.length; i++) {
+        ctx.lineTo(waveTop[i].x, Math.max(0, waveTop[i].y));
+    }
+    ctx.lineTo(width - WALL_WIDTH, 0);
+    ctx.closePath();
+    ctx.fillStyle = '#000';
+    ctx.fill();
+    ctx.restore();
+
     // Shimmering highlight gradient
     let surfGrad = ctx.createLinearGradient(0, 0, 0, surfaceH);
     surfGrad.addColorStop(0, 'rgba(255,255,255,0.22)');
@@ -531,7 +567,7 @@ function animate(ctx, t, width, height) {
     surfGrad.addColorStop(0.7, 'rgba(120,180,255,0.08)');
     surfGrad.addColorStop(1, 'rgba(0,0,0,0)');
     ctx.fillStyle = surfGrad;
-    ctx.fillRect(wallW, 0, width-2*wallW, surfaceH);
+    ctx.fillRect(WALL_WIDTH, 0, width-2*WALL_WIDTH, surfaceH);
 
     // Wavy caustic lines for surface shimmer
     ctx.save();
@@ -539,8 +575,8 @@ function animate(ctx, t, width, height) {
     let waveCount = 4;
     for (let w = 0; w < waveCount; w++) {
         let yBase = 10 + w*10;
-        ctx.moveTo(wallW, yBase);
-        for (let x = wallW; x <= width-wallW; x += 4) {
+        ctx.moveTo(WALL_WIDTH, yBase);
+        for (let x = WALL_WIDTH; x <= width-WALL_WIDTH; x += 4) {
             let y = yBase + Math.sin((x/32) + t*0.8 + w*1.2) * (3.5 + w*1.2) + Math.cos((x/18) - t*0.5 + w*0.7) * 1.2;
             ctx.lineTo(x, y);
         }
@@ -560,7 +596,7 @@ function animate(ctx, t, width, height) {
         let pivotX = Math.random() * (width * 0.7) + width * 0.15;
         let pivotY = -height * 0.5 - 60;
         // Always randomize pole length for each swing
-        let poleLenBase = height * 0.8;
+        let poleLenBase = height * 1.2;
         let poleLen = poleLenBase * (Math.random() * 1.5);
         let netRadius = 60 + Math.random() * 40;
         let netAngleStart = 0;
@@ -647,23 +683,18 @@ function animate(ctx, t, width, height) {
             }
         }
         // End event after swing
-        if (swingT >= 1.0) {
+        if (netEvent.t >= 1000) {
+            console.log('setting event to null')
             netEvent = null;
         }
 
         // Remove fish 1000ms after being scooped
-        const now2 = performance.now();
-        fish = fish.filter(f => !(f.scoopedByNet && f.scoopedTime && now2 - f.scoopedTime > 1000));
-
-        // End event 1000ms after first fish is scooped, or after swing if no fish caught
-        if ((netEvent.scoopedTime && now2 - netEvent.scoopedTime > 1000) || (!netEvent.scoopedTime && swingT >= 1.0)) {
-            netEvent = null;
-        }
+        fish = fish.filter(f => !(f.scoopedByNet && f.scoopedTime && now - f.scoopedTime > 1000));
     }
 
     // Draw tank floor decorations (static, cached)
     if (!tankDecor) {
-        tankDecor = generateTankDecor(width, height, wallW);
+        tankDecor = generateTankDecor(width, height, WALL_WIDTH);
     }
     // --- Continuous gravel surface (band, static) ---
     for (let gb of tankDecor.gravelBand) {
@@ -719,7 +750,7 @@ function animate(ctx, t, width, height) {
     }
     foodPellets = foodPellets.filter(p => !p.eaten);
     // Draw and update food pellets
-    console.log('foodPellets:', foodPellets.length);
+    if (foodPellets.length > 0) console.log('foodPellets:', foodPellets.length);
     for (let pellet of foodPellets) {
         if (pellet.eaten) continue;
         ctx.save();
@@ -734,8 +765,8 @@ function animate(ctx, t, width, height) {
         // Pellet falls down
         pellet.y += pellet.vy;
         // Stop at bottom of tank
-        const wallW = 10;
-        const bottom = height - wallW - pellet.r;
+        const WALL_WIDTH = 10;
+        const bottom = height - WALL_WIDTH - pellet.r;
         if (pellet.y > bottom) pellet.y = bottom;
     }
     // Caustics
@@ -837,18 +868,18 @@ function animate(ctx, t, width, height) {
                     f.target = { x: targetPellet.x, y: targetPellet.y, pellet: targetPellet };
                 } else {
                     // fallback to random target
-                    const wallW = 10;
+                    const WALL_WIDTH = 10;
                     f.target = {
-                        x: wallW + f.size * 0.7 + Math.random() * (width - 2 * wallW - f.size * 1.4),
-                        y: wallW + f.size * 0.5 + Math.random() * (height - 2 * wallW - f.size)
+                        x: WALL_WIDTH + f.size * 0.7 + Math.random() * (width - 2 * WALL_WIDTH - f.size * 1.4),
+                        y: WALL_WIDTH + f.size * 0.5 + Math.random() * (height - 2 * WALL_WIDTH - f.size)
                     };
                 }
             } else if (next === 'explore') {
                 // Pick a random target in tank
-                const wallW = 10;
+                const WALL_WIDTH = 10;
                 f.target = {
-                    x: wallW + f.size * 0.7 + Math.random() * (width - 2 * wallW - f.size * 1.4),
-                    y: wallW + f.size * 0.5 + Math.random() * (height - 2 * wallW - f.size)
+                    x: WALL_WIDTH + f.size * 0.7 + Math.random() * (width - 2 * WALL_WIDTH - f.size * 1.4),
+                    y: WALL_WIDTH + f.size * 0.5 + Math.random() * (height - 2 * WALL_WIDTH - f.size)
                 };
             } else {
                 f.target = null;
@@ -873,8 +904,8 @@ function animate(ctx, t, width, height) {
             egg.vx *= 0.96;
             egg.vy *= 0.96;
             // Gravity (sink to bottom)
-            const wallW = 10;
-            const bottom = height - wallW - egg.r;
+            const WALL_WIDTH = 10;
+            const bottom = height - WALL_WIDTH - egg.r;
             if (egg.y > bottom) { egg.y = bottom; egg.vy *= -0.3; }
             // Hatch timer
             egg.hatchTimer--;
@@ -942,10 +973,10 @@ function animate(ctx, t, width, height) {
         f.y += vy + Math.sin(t * 0.08 + f.x * 0.01) * 0.2;
         drawFish(ctx, f, t);
         // Prevent fish from leaving tank (bounce off tank walls)
-        const minX = wallW + f.size * 0.7;
-        const maxX = width - wallW - f.size * 0.7;
-        const minY = wallW + f.size * 0.5;
-        const maxY = height - wallW - f.size * 0.5;
+        const minX = WALL_WIDTH + f.size * 0.7;
+        const maxX = width - WALL_WIDTH - f.size * 0.7;
+        const minY = WALL_WIDTH + f.size * 0.5;
+        const maxY = height - WALL_WIDTH - f.size * 0.5;
         if (f.x < minX) { f.x = minX; f.vx = Math.abs(f.vx); f.flip = false; }
         if (f.x > maxX) { f.x = maxX; f.vx = -Math.abs(f.vx); f.flip = true; }
         if (f.y < minY) { f.y = minY; f.vy = Math.abs(f.vy); }
@@ -1091,10 +1122,10 @@ function animate(ctx, t, width, height) {
     ctx.save();
     ctx.fillStyle = '#b8e0f8';
     ctx.globalAlpha = 0.7;
-    ctx.fillRect(0, 0, wallW, height); // left
-    ctx.fillRect(width - wallW, 0, wallW, height); // right
-    // ctx.fillRect(0,0,width,wallW); // top (removed)
-    ctx.fillRect(0, height - wallW, width, wallW); // bottom
+    ctx.fillRect(0, 0, WALL_WIDTH, height); // left
+    ctx.fillRect(width - WALL_WIDTH, 0, WALL_WIDTH, height); // right
+    // ctx.fillRect(0,0,width,WALL_WIDTH); // top (removed)
+    ctx.fillRect(0, height - WALL_WIDTH, width, WALL_WIDTH); // bottom
     ctx.restore();
 }
 
