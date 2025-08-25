@@ -2,7 +2,6 @@ import seedGrowthShader from './shaders/seedGrowthShader.js';
 import gridGlyphShader4 from './shaders/gridGlyphShader4.js';
 import { randomizeGlyphLineWeights } from './utilities/glyphGenerators.js';
 import { shaders } from './shaders.js';
-// const shaders = [
 // 	{ shader: plasma1, displayName: 'Demo Scene 1' },
 // 	{ shader: plasma2, displayName: 'Demo Scene 2' },
 // 	{ shader: cubesShader, displayName: 'Cubes' },

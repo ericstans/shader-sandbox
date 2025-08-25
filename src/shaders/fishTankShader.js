@@ -120,15 +120,100 @@ function onClick(e, { canvas, ctx, width, height }) {
     // Undo pan/zoom transform
     let x = (typeof window.viewZoom === 'number' ? (rawX - (window.viewOffsetX || 0)) / (window.viewZoom || 1) : rawX);
     let y = (typeof window.viewZoom === 'number' ? (rawY - (window.viewOffsetY || 0)) / (window.viewZoom || 1) : rawY);
-    // Only add food if inside tank (not on wall)
+    // Only add food or fish if inside tank (not on wall)
     const wallW = 10;
     if (e.button === 1) {
         // Middle click
         e.preventDefault();
         return;
     }
-    if (x > wallW && x < width - wallW && y > wallW && y < height - wallW) {
-        addFoodPellet(x, y);
+    if (x > wallW && x < width-wallW && y > wallW && y < height-wallW) {
+        if (e.shiftKey) {
+            // Add a fish at this location (random species)
+            if (typeof resetFish === 'function') {
+                // Use the same speciesList as in resetFish
+                const speciesList = [
+                    {
+                        name: 'Eyeball Fish',
+                        body: { rx: 0.5, ry: 0.5 },
+                        tail: { len: 0.18, height: 0.18, style: 'fan' },
+                        color: () => `hsl(320,90%,65%)`,
+                        eye: '#fff',
+                        bigEye: true
+                    },
+                    {
+                        name: 'Clown Loach',
+                        body: { rx: 1.1, ry: 0.28 },
+                        tail: { len: 0.32, height: 0.18, style: 'fork' },
+                        color: () => `hsl(32,90%,55%)`,
+                        eye: '#222',
+                        size: 28 + Math.random()*10,
+                        hasStripes: true,
+                        whiskers: true
+                    },
+                    {
+                        name: 'Sturgeon',
+                        body: { rx: 1.3, ry: 0.22 },
+                        tail: { len: 0.7, height: 0.18, style: 'sturgeon' },
+                        color: () => `hsl(${110+Math.random()*20},60%,32%)`,
+                        eye: '#fff',
+                        size: 44 + Math.random()*12
+                    },
+                    {
+                        name: 'Goldfish',
+                        body: { rx: 0.7, ry: 0.32 },
+                        tail: { len: 0.38, height: 0.28, style: 'fan' },
+                        color: () => `hsl(${35+Math.random()*20},90%,60%)`,
+                        eye: '#fff',
+                    },
+                    {
+                        name: 'Neon Tetra',
+                        body: { rx: 0.9, ry: 0.18 },
+                        tail: { len: 0.22, height: 0.12, style: 'fork' },
+                        color: () => `hsl(200,80%,60%)`,
+                        stripe: true,
+                        eye: '#fff',
+                    },
+                    {
+                        name: 'Betta',
+                        body: { rx: 0.7, ry: 0.32 },
+                        tail: { len: 0.7, height: 0.5, style: 'veil' },
+                        color: () => `hsl(${300+Math.random()*60},70%,60%)`,
+                        eye: '#fff',
+                    },
+                    {
+                        name: 'Corydoras',
+                        body: { rx: 0.6, ry: 0.28 },
+                        tail: { len: 0.28, height: 0.18, style: 'fan' },
+                        color: () => `hsl(${90+Math.random()*40},40%,60%)`,
+                        eye: '#fff',
+                    },
+                    {
+                        name: 'Guppy',
+                        body: { rx: 0.5, ry: 0.22 },
+                        tail: { len: 0.5, height: 0.32, style: 'triangle' },
+                        color: () => `hsl(${Math.floor(Math.random()*360)},80%,65%)`,
+                        eye: '#fff',
+                    },
+                ];
+                let species = speciesList[Math.floor(Math.random()*speciesList.length)];
+                fish.push({
+                    x: x,
+                    y: y,
+                    vx: (Math.random()*0.5+0.3) * (Math.random()<0.5?-1:1),
+                    vy: (Math.random()-0.5)*0.2,
+                    size: species.size || (18+Math.random()*18),
+                    color: species.color(),
+                    flip: Math.random()<0.5,
+                    behavior: 'float',
+                    behaviorTimer: 60 + Math.random()*120,
+                    target: null,
+                    species: species
+                });
+            }
+        } else {
+            addFoodPellet(x, y);
+        }
     }
 }
 
@@ -536,7 +621,6 @@ function animate(ctx, t, width, height) {
 
         // Mark fish inside net ellipse as scooped and attach to net, but do not remove from fish array
         const now = performance.now();
-        let scoopedThisFrame = false;
         for (let f of fish) {
             if (f.scoopedByNet) {
                 // Already scooped, update position to follow net
