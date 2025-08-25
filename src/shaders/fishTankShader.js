@@ -16,8 +16,8 @@ let tankDecor = null;
 let foodPellets = [];
 // Lily pads
 let lilyPads = [];
-const MAX_LILY_PADS = 5;
-const LILY_PAD_SPAWN_CHANCE = 1/2; // chance per frame
+const MAX_LILY_PADS = 8;
+const LILY_PAD_SPAWN_CHANCE = 1/3000; // chance per frame
 
 // Add a food pellet at (x, y)
 // Generate static decorations for the tank floor
