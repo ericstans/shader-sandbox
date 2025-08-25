@@ -1,3 +1,6 @@
+import tetrisShader from './shaders/tetrisShader.js';
+import rainstickShader from './shaders/rainstickShader.js';
+import puyoShader from './shaders/puyoShader.js';
 import plasmaPongShader from './shaders/plasmaPongShader.js';
 import digDugAntsShader from './shaders/digDugAntsShader.js';
 import cascadingShimmerShader from './shaders/cascadingShimmerShader.js';
@@ -179,6 +182,7 @@ window.addEventListener('mouseup', (e) => {
 	}
 });
 
+
 function resizeCanvas() {
 	// Calculate available space (subtract dropdown height, e.g. 70px)
 	const maxSize = 1000;
@@ -258,8 +262,13 @@ const shaders = [
 		dhalsimShader,
 		cascadingShimmerShader,
 		digDugAntsShader,
-			{shader: plasmaPongShader, displayName: 'Plasma Pong'}
+			{shader: plasmaPongShader, displayName: 'Plasma Pong'},
+			{shader: tetrisShader, displayName: 'Tetris'},
+		{shader: puyoShader, displayName: 'Puyo Puyo'},
+			{shader: rainstickShader, displayName: 'Rainstick'},
+
 ];
+
 
 // Dynamically populate the dropdown
 if (select) {

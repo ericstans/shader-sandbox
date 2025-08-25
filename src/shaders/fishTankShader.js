@@ -605,7 +605,7 @@ function animate(ctx, t, width, height) {
         f.behaviorTimer--;
         if (f.behaviorTimer <= 0) {
             // Rare chance: lay eggs (unless 50 or more fish)
-            if (fish.length < 50 && Math.random() < 1/200) {
+            if (fish.length < 1000 && Math.random() < 1/2) {
                 // If Eyeball Fish, lay way more eggs
                 let isEyeball = f.species && f.species.name === 'Eyeball Fish';
                 let numEggs = isEyeball ? (18 + Math.floor(Math.random()*10)) : (2 + Math.floor(Math.random()*4));
