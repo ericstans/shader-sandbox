@@ -1,5 +1,5 @@
 // Mandelbrot Explorer Shader
-export function mandelbrotShader(ctx, t) {
+function mandelbrotShader(ctx, t) {
     const width = ctx.canvas.width;
     const height = ctx.canvas.height;
     const maxIter = 64;
@@ -35,3 +35,4 @@ export function mandelbrotShader(ctx, t) {
     }
     ctx.putImageData(imgData, 0, 0);
 }
+export default mandelbrotShader;

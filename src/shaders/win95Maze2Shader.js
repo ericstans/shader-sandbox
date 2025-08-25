@@ -3,7 +3,7 @@
 // Features: 3D first-person, textured walls/floor/ceiling, animated camera, random maze, objects
 // (Textures are procedural for now; can be replaced with images for more accuracy)
 
-export function win95Maze2Shader(ctx, t, width = 1000, height = 1000) {
+function win95Maze2Shader(ctx, t, width = 1000, height = 1000) {
     // --- Maze parameters ---
     const cols = 15, rows = 15;
     if (!win95Maze2Shader.maze) {
@@ -74,6 +74,7 @@ export function win95Maze2Shader(ctx, t, width = 1000, height = 1000) {
     // --- 3D Raycasting ---
     renderMaze3D(ctx, win95Maze2Shader.maze, cols, rows, cam, angle, width, height, t);
 }
+export default win95Maze2Shader;
 
 // --- 3D Maze Generation ---
 function generateMaze3D(cols, rows) {

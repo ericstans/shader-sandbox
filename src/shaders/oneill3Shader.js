@@ -1,5 +1,5 @@
 // Shader: Planet with O'Neill Cylinder (low-poly, 3D)
-export function oneill3Shader(ctx, t, width = 1000, height = 1000) {
+function oneill3Shader(ctx, t, width = 1000, height = 1000) {
     // Camera and scene setup
     const cx = width / 2;
     const cy = height / 2;
@@ -323,3 +323,4 @@ export function oneill3Shader(ctx, t, width = 1000, height = 1000) {
         return r;
     }
 }
+export default oneill3Shader;

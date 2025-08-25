@@ -1,5 +1,5 @@
 // Shader: Planet with O'Neill Cylinder (low-poly, 3D)
-export function oneillShader(ctx, t, width = 1000, height = 1000) {
+function oneillShader(ctx, t, width = 1000, height = 1000) {
     // Track highlighted faces by (i,j) index to avoid duplicate beeps
     if (!oneillShader.prevHighlights) oneillShader.prevHighlights = new Set();
     const newHighlights = new Set();
@@ -338,3 +338,4 @@ export function oneillShader(ctx, t, width = 1000, height = 1000) {
         return r;
     }
 }
+export default oneillShader;

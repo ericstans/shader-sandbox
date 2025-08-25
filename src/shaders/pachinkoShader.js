@@ -1,7 +1,7 @@
 // Shader: Pachinko Simulation
 // Simulates balls bouncing off pegs and falling into slots, with auto-launched balls.
 
-export function pachinkoShader(ctx, t, width = 1000, height = 1000) {
+function pachinkoShader(ctx, t, width = 1000, height = 1000) {
     ctx.save();
     ctx.fillStyle = '#222';
     ctx.fillRect(0, 0, width, height);
@@ -119,6 +119,7 @@ export function pachinkoShader(ctx, t, width = 1000, height = 1000) {
     }
     ctx.restore();
 }
+export default pachinkoShader;
 
 function pastel(i) {
     const colors = [

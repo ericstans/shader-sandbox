@@ -1,5 +1,5 @@
 // Shader 14: The Wave (spinning 3D rectangles with gradient and phase offset)
-export function theWaveShader(ctx, t) {
+function theWaveShader(ctx, t) {
     const width = ctx.canvas.width;
     const height = ctx.canvas.height;
     ctx.clearRect(0, 0, width, height);
@@ -58,3 +58,4 @@ export function theWaveShader(ctx, t) {
         }
     }
 }
+export default theWaveShader;

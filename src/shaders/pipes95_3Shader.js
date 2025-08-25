@@ -1,5 +1,5 @@
 // Shader 11: Pipes 95 3 (slower, further apart, longer-lasting pipes)
-export function pipes95_3Shader(ctx, t) {
+function pipes95_3Shader(ctx, t) {
     const width = ctx.canvas.width;
     const height = ctx.canvas.height;
     ctx.clearRect(0, 0, width, height);
@@ -88,3 +88,4 @@ export function pipes95_3Shader(ctx, t) {
         ctx.restore();
     }
 }
+export default pipes95_3Shader;

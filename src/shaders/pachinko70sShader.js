@@ -1,7 +1,7 @@
 // Shader: Pachinko 70s (Classic Board)
 // Simulates a 1970s-style pachinko board: small metallic balls, dense brass pegs in a fan pattern, launch on right, ornate look.
 
-export function pachinko70sShader(ctx, t, width = 1000, height = 1000) {
+function pachinko70sShader(ctx, t, width = 1000, height = 1000) {
     ctx.save();
     // Background: wood paneling look
     let grad = ctx.createLinearGradient(0, 0, width, height);
@@ -219,3 +219,4 @@ export function pachinko70sShader(ctx, t, width = 1000, height = 1000) {
     }
     ctx.restore();
 }
+export default pachinko70sShader;

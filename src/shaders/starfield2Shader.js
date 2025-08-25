@@ -1,5 +1,5 @@
 // Shader: Starfield 2 (classic hyperspace, white dots, flying through)
-export function starfield2Shader(ctx, t, width = 1000, height = 1000) {
+function starfield2Shader(ctx, t, width = 1000, height = 1000) {
     // Number of stars
     const numStars = 320;
     // Initialize static star positions and speeds
@@ -65,3 +65,4 @@ export function starfield2Shader(ctx, t, width = 1000, height = 1000) {
         ctx.restore();
     }
 }
+export default starfield2Shader;

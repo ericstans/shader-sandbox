@@ -1,7 +1,7 @@
 // Shader: Low-Poly 3D Spheres Bouncing Off Angled Plane
 // Renders several low-poly spheres bouncing off a flat, angled plane using simple 3D projection.
 
-export function lowPolySpheresShader(ctx, t, width = 1000, height = 1000) {
+function lowPolySpheresShader(ctx, t, width = 1000, height = 1000) {
     ctx.save();
     ctx.fillStyle = '#222';
     ctx.fillRect(0, 0, width, height);
@@ -33,6 +33,7 @@ export function lowPolySpheresShader(ctx, t, width = 1000, height = 1000) {
     }
     ctx.restore();
 }
+export default lowPolySpheresShader;
 
 function planeHeightAt(x, z, plane) {
     // Plane: normal.x * X + normal.y * Y + normal.z * Z + d = 0

@@ -1,7 +1,7 @@
 // Shader: Marble Madness (1970s Arcade Inspired)
 // A tribute to the isometric marble maze game: rolling marble, ramps, slopes, and obstacles.
 
-export function marbleMadnessShader(ctx, t, width = 1000, height = 1000) {
+function marbleMadnessShader(ctx, t, width = 1000, height = 1000) {
     ctx.save();
     // Background gradient (sky)
     let grad = ctx.createLinearGradient(0, 0, 0, height);
@@ -145,3 +145,4 @@ export function marbleMadnessShader(ctx, t, width = 1000, height = 1000) {
     ctx.stroke();
     ctx.restore();
 }
+export default marbleMadnessShader;

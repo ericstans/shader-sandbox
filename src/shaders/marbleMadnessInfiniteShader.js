@@ -10,7 +10,7 @@ let avgTileX = 0
 // Shader: Marble Madness Infinite (Procedural, Scrolling)
 // An endless marble madness level with a marble, panning camera, and procedural level generation.
 
-export function marbleMadnessInfiniteShader(ctx, t, width = 1000, height = 1000) {
+function marbleMadnessInfiniteShader(ctx, t, width = 1000, height = 1000) {
     ctx.save();
     // Clear the canvas each frame
     ctx.clearRect(0, 0, width, height);
@@ -252,4 +252,6 @@ export function marbleMadnessInfiniteShader(ctx, t, width = 1000, height = 1000)
     ctx.lineWidth = 2;
     ctx.stroke();
     ctx.restore();
+
 }
+export default marbleMadnessInfiniteShader;

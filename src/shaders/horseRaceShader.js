@@ -1,6 +1,6 @@
 // Shader: Horse Race
 // Animated emoji horses run from left to right, new horses spawn as old ones leave.
-export function horseRaceShader(ctx, t, width = 1000, height = 1000) {
+function horseRaceShader(ctx, t, width = 1000, height = 1000) {
     // --- Persistent state ---
     if (!horseRaceShader.horses) {
         horseRaceShader.horses = [];
@@ -96,3 +96,4 @@ export function horseRaceShader(ctx, t, width = 1000, height = 1000) {
         }
     }
 }
+export default horseRaceShader;

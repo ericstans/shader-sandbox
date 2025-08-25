@@ -1,5 +1,5 @@
 // Shader 17: The Wave 4 (random pitch, roll, skew, smaller squares)
-export function theWave4Shader(ctx, t) {
+function theWave4Shader(ctx, t) {
     const width = ctx.canvas.width;
     const height = ctx.canvas.height;
     ctx.fillStyle = 'black';
@@ -96,3 +96,4 @@ export function theWave4Shader(ctx, t) {
         }
     }
 }
+export default theWave4Shader;

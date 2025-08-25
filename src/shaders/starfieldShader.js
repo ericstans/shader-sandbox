@@ -1,5 +1,5 @@
 // Shader: Starfield (Windows 95 screensaver style)
-export function starfieldShader(ctx, t, width = 1000, height = 1000) {
+function starfieldShader(ctx, t, width = 1000, height = 1000) {
     // Attach click handler once to restart starfield on click
     if (!starfieldShader._clickHandlerAttached) {
         const canvas = ctx.canvas;
@@ -80,3 +80,4 @@ export function starfieldShader(ctx, t, width = 1000, height = 1000) {
     ctx.fill();
     ctx.restore();
 }
+export default starfieldShader;

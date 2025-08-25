@@ -1,5 +1,5 @@
 // Shader 9: Pipes 95 (Windows 95 Pipes screensaver inspired)
-export function pipes95Shader(ctx, t) {
+function pipes95Shader(ctx, t) {
     const width = ctx.canvas.width;
     const height = ctx.canvas.height;
     ctx.clearRect(0, 0, width, height);
@@ -74,3 +74,4 @@ export function pipes95Shader(ctx, t) {
         ctx.restore();
     }
 }
+export default pipes95Shader;

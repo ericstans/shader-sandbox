@@ -1,5 +1,5 @@
 // Shader 15: The Wave 2 (color of each square shifts over time)
-export function theWave2Shader(ctx, t) {
+function theWave2Shader(ctx, t) {
     const width = ctx.canvas.width;
     const height = ctx.canvas.height;
     ctx.fillStyle = 'black';
@@ -69,3 +69,4 @@ export function theWave2Shader(ctx, t) {
         }
     }
 }
+export default theWave2Shader;

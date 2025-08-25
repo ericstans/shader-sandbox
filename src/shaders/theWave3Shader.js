@@ -1,5 +1,5 @@
 // Shader 16: The Wave 3 (randomized phase and position)
-export function theWave3Shader(ctx, t) {
+function theWave3Shader(ctx, t) {
     const width = ctx.canvas.width;
     const height = ctx.canvas.height;
     ctx.fillStyle = 'black';
@@ -66,3 +66,4 @@ export function theWave3Shader(ctx, t) {
         }
     }
 }
+export default theWave3Shader;

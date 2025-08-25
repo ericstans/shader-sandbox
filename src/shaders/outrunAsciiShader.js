@@ -1,5 +1,5 @@
 // Shader 8: Outrun ASCII (moving road and trees with ASCII/Unicode art)
-export function outrunAsciiShader(ctx, t) {
+function outrunAsciiShader(ctx, t) {
     const width = ctx.canvas.width;
     const height = ctx.canvas.height;
     ctx.clearRect(0, 0, width, height);
@@ -92,3 +92,4 @@ export function outrunAsciiShader(ctx, t) {
         }
     }
 }
+export default outrunAsciiShader;

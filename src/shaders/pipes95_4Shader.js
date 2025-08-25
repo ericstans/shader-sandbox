@@ -1,5 +1,5 @@
 // Shader 12: Pipes 95 4 (single continuous pipe, never disappears, covers the screen)
-export function pipes95_4Shader(ctx, t) {
+function pipes95_4Shader(ctx, t) {
     const width = ctx.canvas.width;
     const height = ctx.canvas.height;
     ctx.clearRect(0, 0, width, height);
@@ -125,3 +125,4 @@ export function pipes95_4Shader(ctx, t) {
     ctx.stroke();
     ctx.restore();
 }
+export default pipes95_4Shader;
