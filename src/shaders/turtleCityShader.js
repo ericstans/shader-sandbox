@@ -52,8 +52,17 @@ function animate(ctx, t, width, height) {
             }
             let frac = i / (nBuildings - 1);
             let bx = centerX - cityW / 2 + frac * cityW;
-            let bH = shellH * 3 * (0.28 + Math.random() * 1);
-            let bW = shellW * (0.09 + Math.random() * 0.08);
+            // Default building height and width
+            let maxH = shellH * 3 * 1.28;
+            let bH, bW;
+            // If brick, restrict height to 50% of max
+            if (type === 4) {
+                bH = maxH * (0.28 + Math.random() * 0.5); // up to 50% of max
+                bW = shellW * (0.09 + Math.random() * 0.08);
+            } else {
+                bH = shellH * 3 * (0.28 + Math.random() * 1);
+                bW = shellW * (0.09 + Math.random() * 0.08);
+            }
             // Curve the baseline to match the shell's arch (ellipse), but move up so bottoms are hidden
             let normX = (bx - centerX) / (shellW * 0.48); // tighter arch
             let arch = Math.sqrt(Math.max(0, 1 - normX * normX));
@@ -73,16 +82,20 @@ function animate(ctx, t, width, height) {
                 '#a89f91'  // stucco
             ];
             let color, domeColor;
-            // Add type: 0=rect, 1=dome, 2=spire, 3=round tower
+            // Add type: 0=rect, 1=dome, 2=spire, 3=round tower, 4=brick
             let typeRand = Math.random();
             let type = 0;
-            if (typeRand < 0.33) type = 0; // normal rect
-            else if (typeRand < 0.66) type = 1; // dome
-            else if (typeRand < 0.83) type = 2; // tall spire
-            else type = 3; // round tower
+            if (typeRand < 0.25) type = 0; // normal rect
+            else if (typeRand < 0.5) type = 1; // dome
+            else if (typeRand < 0.7) type = 2; // tall spire
+            else if (typeRand < 0.85) type = 3; // round tower
+            else type = 4; // brick
             if (type === 2 || type === 3) {
                 color = materialColors[Math.floor(Math.random() * materialColors.length)];
                 domeColor = color;
+            } else if (type === 4) {
+                color = '#b55239'; // brick red
+                domeColor = '#c97a5a';
             } else {
                 color = `hsl(${180 + Math.random() * 40}, 18%, ${60 + Math.random() * 20}%)`;
                 domeColor = `hsl(${180 + Math.random() * 40}, 28%, ${70 + Math.random() * 20}%)`;
@@ -103,6 +116,9 @@ function animate(ctx, t, width, height) {
         } else if (b.type === 2) {
             // Tall spire (thin rect)
             ctx.rect(b.bx - b.bW * 0.18, b.by, b.bW * 0.36, b.bH * 1.2);
+        } else if (b.type === 4) {
+            // Brick building: always rectangular
+            ctx.rect(b.bx - b.bW / 2, b.by, b.bW, b.bH);
         } else {
             ctx.rect(b.bx - b.bW / 2, b.by, b.bW, b.bH);
         }
@@ -111,6 +127,23 @@ function animate(ctx, t, width, height) {
         ctx.shadowBlur = 8;
         ctx.globalAlpha = 0.92;
         ctx.fill();
+        // Brick pattern for brick buildings
+        if (b.type === 4) {
+            ctx.save();
+            ctx.globalAlpha = 0.22;
+            ctx.strokeStyle = '#7a2d1b';
+            let brickH = Math.max(4, b.bH / 16);
+            let brickW = Math.max(8, b.bW / 6);
+            for (let y = b.by; y < b.by + b.bH - 1; y += brickH) {
+                let offset = ((Math.floor((y - b.by) / brickH)) % 2) * (brickW / 2);
+                for (let x = b.bx - b.bW / 2 + offset; x < b.bx + b.bW / 2 - 1; x += brickW) {
+                    ctx.beginPath();
+                    ctx.rect(x, y, brickW, brickH);
+                    ctx.stroke();
+                }
+            }
+            ctx.restore();
+        }
         // Windows (skip for spire)
         if (b.type !== 2) {
             let nWin = 2 + Math.floor(b.bH / 18);
@@ -176,6 +209,23 @@ function animate(ctx, t, width, height) {
             ctx.shadowColor = '#fff8';
             ctx.shadowBlur = 6;
             ctx.fill();
+        } else if (b.type === 4) {
+            // Brick building: rhombus roof ornament
+            ctx.save();
+            ctx.beginPath();
+            let rhW = b.bW * 0.32;
+            let rhH = b.bW * 0.22;
+            ctx.moveTo(b.bx, b.by - rhH); // top
+            ctx.lineTo(b.bx + rhW, b.by); // right
+            ctx.lineTo(b.bx, b.by + rhH); // bottom
+            ctx.lineTo(b.bx - rhW, b.by); // left
+            ctx.closePath();
+            ctx.fillStyle = b.domeColor;
+            ctx.globalAlpha = 0.8;
+            ctx.shadowColor = '#fff8';
+            ctx.shadowBlur = 6;
+            ctx.fill();
+            ctx.restore();
         } else {
             // Default dome
             ctx.beginPath();

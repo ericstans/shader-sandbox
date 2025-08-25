@@ -157,7 +157,14 @@ function playSound(volume, speed = 1) {
   bp.Q.value = BANDPASS_Q;
   // Gain
   const g = ctx.createGain();
-  g.gain.value = 0.08 * volume * scale;
+  // Compensate for Q: as Q increases above 18, increase gain up to 2x at Q=40; as Q drops below 10, decrease gain to 0.5x at Q=1
+  let qComp = 1;
+  if (BANDPASS_Q > 18) {
+    qComp = 1 + (BANDPASS_Q - 18) / 22; // 1.0 at 18, 2.0 at 40
+  } else if (BANDPASS_Q < 10) {
+    qComp = 0.4 + 0.6 * (BANDPASS_Q / 10); // 0.4 at Q=1, 1.0 at Q=10
+  }
+  g.gain.value = 0.08 * volume * scale * qComp;
   noise.connect(bp).connect(g).connect(ctx.destination);
   // Track active impact sounds for scaling
   window._rainstickActiveImpacts = (window._rainstickActiveImpacts || 0) + 1;
@@ -169,14 +176,12 @@ function playSound(volume, speed = 1) {
 }
 
 export function onChangedAway() {
-  // Remove Balls slider, label, sound dropdown, and Q slider UI immediately
+  // Remove all UI elements created by the rainstick shader
   if (uiElements) {
-    if (uiElements.slider && uiElements.slider.parentNode) uiElements.slider.parentNode.removeChild(uiElements.slider);
-    if (uiElements.label && uiElements.label.parentNode) uiElements.label.parentNode.removeChild(uiElements.label);
-    if (uiElements.soundDropdown && uiElements.soundDropdown.parentNode) uiElements.soundDropdown.parentNode.removeChild(uiElements.soundDropdown);
-    if (uiElements.soundLabel && uiElements.soundLabel.parentNode) uiElements.soundLabel.parentNode.removeChild(uiElements.soundLabel);
-    if (uiElements.qSlider && uiElements.qSlider.parentNode) uiElements.qSlider.parentNode.removeChild(uiElements.qSlider);
-    if (uiElements.qLabel && uiElements.qLabel.parentNode) uiElements.qLabel.parentNode.removeChild(uiElements.qLabel);
+    for (const key of Object.keys(uiElements)) {
+      const el = uiElements[key];
+      if (el && el.parentNode) el.parentNode.removeChild(el);
+    }
   }
   uiElements = null;
 }

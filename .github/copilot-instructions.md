@@ -1,0 +1,1 @@
+- Prefer named constants to magic numbers.
