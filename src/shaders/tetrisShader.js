@@ -201,17 +201,52 @@ function animate(ctx, t, width, height) {
         let testBoard = state.board.map(row => row.slice());
         let tempPiece = Object.assign({}, testPiece, { y });
         merge(testBoard, tempPiece);
-        // Evaluate board: count gaps (empty cells with a block above)
+        // Evaluate board: count overhangs only if blocked on at least one side
         let gaps = 0;
         for (let col = 0; col < COLS; col++) {
           let foundBlock = false;
           for (let row = 0; row < ROWS; row++) {
-            if (testBoard[row][col]) foundBlock = true;
-            else if (foundBlock) gaps++;
+            if (testBoard[row][col]) {
+              foundBlock = true;
+            } else if (foundBlock) {
+              // Only count as a gap if at least one horizontal neighbor is a block
+              let leftBlocked = col > 0 && testBoard[row][col-1];
+              let rightBlocked = col < COLS-1 && testBoard[row][col+1];
+              if (leftBlocked || rightBlocked) {
+                gaps++;
+              }
+            }
           }
         }
-        // Prefer fewer gaps, then lower placement
-        let score = -gaps * 1000 + y;
+        // After gap logic, count 'I-only wells': columns with a 1-wide, unbroken vertical gap, filled on both sides for the entire height
+        let iWells = 0;
+        for (let col = 0; col < COLS; col++) {
+          // Find the first filled cell in this column
+          let top = 0;
+          while (top < ROWS && !testBoard[top][col]) top++;
+          // If the well starts at the top (no blocks above), check if it's a 1-wide well
+          if (top < ROWS) {
+            let wellStart = top;
+            // Find the bottom of the well (first empty cell below top)
+            let wellEnd = top;
+            while (wellEnd < ROWS && !testBoard[wellEnd][col]) wellEnd++;
+            // Check if the well is 1-wide and surrounded by blocks on both sides for its entire height
+            let isIWell = true;
+            if (wellEnd - wellStart > 0) {
+              for (let row = wellStart; row < wellEnd; row++) {
+                let leftFilled = col === 0 || testBoard[row][col-1];
+                let rightFilled = col === COLS-1 || testBoard[row][col+1];
+                if (!leftFilled || !rightFilled) {
+                  isIWell = false;
+                  break;
+                }
+              }
+              if (isIWell) iWells++;
+            }
+          }
+        }
+        // Prefer fewer gaps, then lower placement, then penalize >1 I-only well
+        let score = -gaps * 1000 + y - (iWells > 1 ? (iWells-1) * 2000 : 0);
         if (score > bestScore) {
           bestScore = score;
           best = { x, rot, y };
@@ -288,14 +323,9 @@ function animate(ctx, t, width, height) {
   }
   ctx.restore();
   // Draw lines/score
-  ctx.font = 'bold 20px monospace';
-  ctx.fillStyle = '#fff';
-  ctx.fillText('Lines: '+state.lines, BOARD_W+24, 120);
-  if (state.gameOver) {
-    ctx.font = 'bold 32px monospace';
-    ctx.fillStyle = '#f44';
-    ctx.fillText('GAME OVER', 10, BOARD_H/2);
-  }
+  // ctx.font = 'bold 20px monospace';
+  // ctx.fillStyle = '#fff';
+  // ctx.fillText('Lines: '+state.lines, BOARD_W+24, 120);
   ctx.restore();
 }
 
