@@ -16,7 +16,7 @@ function animate(ctx, t, width, height) {
     const centerX = width / 2;
     const baseY = height * 0.7;
     const shellW = width * 0.48;
-    const shellH = height * 0.28;
+    const shellH = height * 0.1;
     const headR = shellW * 0.18;
     const legW = shellW * 0.18;
     const legH = shellH * 0.7;
@@ -33,16 +33,42 @@ function animate(ctx, t, width, height) {
             }
             let frac = i / (nBuildings - 1);
             let bx = centerX - cityW / 2 + frac * cityW;
-            let bH = shellH * (0.28 + Math.random() * 1);
+            let bH = shellH * 3 * (0.28 + Math.random() * 1);
             let bW = shellW * (0.09 + Math.random() * 0.08);
             // Curve the baseline to match the shell's arch (ellipse), but move up so bottoms are hidden
             let normX = (bx - centerX) / (shellW * 0.48); // tighter arch
             let arch = Math.sqrt(Math.max(0, 1 - normX * normX));
             let cityBaseY = baseY - shellH * arch * 0.68; // slightly higher
             let by = cityBaseY - bH;
-            let color = `hsl(${180 + Math.random() * 40}, 18%, ${60 + Math.random() * 20}%)`;
-            let domeColor = `hsl(${180 + Math.random() * 40}, 28%, ${70 + Math.random() * 20}%)`;
-            buildings.push({ bx, by, bW, bH, color, domeColor });
+            // Plausible building material colors
+            const materialColors = [
+                '#bca27e', // sandstone
+                '#a3b1bd', // granite
+                '#d9cfc1', // limestone
+                '#b0a99f', // concrete
+                '#c2b280', // adobe
+                '#e0d7c3', // marble
+                '#b7b7b7', // cement
+                '#c9b29b', // brick
+                '#b5a642', // ochre stone
+                '#a89f91'  // stucco
+            ];
+            let color, domeColor;
+            // Add type: 0=rect, 1=dome, 2=spire, 3=round tower
+            let typeRand = Math.random();
+            let type = 0;
+            if (typeRand < 0.33) type = 0; // normal rect
+            else if (typeRand < 0.66) type = 1; // dome
+            else if (typeRand < 0.83) type = 2; // tall spire
+            else type = 3; // round tower
+            if (type === 2 || type === 3) {
+                color = materialColors[Math.floor(Math.random() * materialColors.length)];
+                domeColor = color;
+            } else {
+                color = `hsl(${180 + Math.random() * 40}, 18%, ${60 + Math.random() * 20}%)`;
+                domeColor = `hsl(${180 + Math.random() * 40}, 28%, ${70 + Math.random() * 20}%)`;
+            }
+            buildings.push({ bx, by, bW, bH, color, domeColor, type });
         }
         cachedCity = { width, height, cityW, buildings };
     }
@@ -52,46 +78,117 @@ function animate(ctx, t, width, height) {
         let b = cachedCity.buildings[i];
         ctx.save();
         ctx.beginPath();
-        ctx.rect(b.bx - b.bW / 2, b.by, b.bW, b.bH);
+        if (b.type === 3) {
+            // Round tower
+            ctx.ellipse(b.bx, b.by + b.bH / 2, b.bW / 2, b.bH / 2, 0, 0, Math.PI * 2);
+        } else if (b.type === 2) {
+            // Tall spire (thin rect)
+            ctx.rect(b.bx - b.bW * 0.18, b.by, b.bW * 0.36, b.bH * 1.2);
+        } else {
+            ctx.rect(b.bx - b.bW / 2, b.by, b.bW, b.bH);
+        }
         ctx.fillStyle = b.color;
         ctx.shadowColor = '#fff8';
         ctx.shadowBlur = 8;
         ctx.globalAlpha = 0.92;
         ctx.fill();
-        // Windows
-        let nWin = 2 + Math.floor(b.bH / 18);
-        for (let w = 0; w < nWin; w++) {
-            let wy = b.by + 6 + w * (b.bH - 12) / nWin;
-            ctx.beginPath();
-            ctx.rect(b.bx - b.bW / 4, wy, b.bW / 2, 5);
-            ctx.fillStyle = '#ffe';
-            ctx.globalAlpha = 0.7 + 0.2 * Math.sin(elapsed * 2 + i + w);
-            ctx.fill();
+        // Windows (skip for spire)
+        if (b.type !== 2) {
+            let nWin = 2 + Math.floor(b.bH / 18);
+            for (let w = 0; w < nWin; w++) {
+                let wy = b.by + 6 + w * (b.bH - 12) / nWin;
+                ctx.beginPath();
+                if (b.type === 3) {
+                    // Round tower windows
+                    ctx.ellipse(b.bx, wy + 2, b.bW / 4, 3, 0, 0, Math.PI * 2);
+                } else {
+                    ctx.rect(b.bx - b.bW / 4, wy, b.bW / 2, 5);
+                }
+                ctx.fillStyle = '#ffe';
+                ctx.globalAlpha = 0.7 + 0.2 * Math.sin(elapsed * 2 + i + w);
+                ctx.fill();
+            }
         }
         ctx.restore();
     }
     for (let i = 0; i < cachedCity.buildings.length; i++) {
         let b = cachedCity.buildings[i];
         ctx.save();
-        ctx.beginPath();
-        ctx.ellipse(b.bx, b.by, b.bW * 0.5, b.bW * 0.32, 0, 0, Math.PI * 2);
-        ctx.fillStyle = b.domeColor;
-        ctx.globalAlpha = 0.7;
-        ctx.shadowColor = '#fff8';
-        ctx.shadowBlur = 6;
-        ctx.fill();
-        // Spire
-        ctx.beginPath();
-        ctx.moveTo(b.bx, b.by - b.bW * 0.32);
-        ctx.lineTo(b.bx, b.by - b.bW * 0.32 - b.bH * 0.22);
-        ctx.lineWidth = 2.2;
-        ctx.strokeStyle = '#bcd';
-        ctx.globalAlpha = 0.7;
-        ctx.stroke();
+        if (b.type === 1) {
+            // Dome
+            ctx.beginPath();
+            ctx.ellipse(b.bx, b.by, b.bW * 0.5, b.bW * 0.32, 0, 0, Math.PI * 2);
+            ctx.fillStyle = b.domeColor;
+            ctx.globalAlpha = 0.7;
+            ctx.shadowColor = '#fff8';
+            ctx.shadowBlur = 6;
+            ctx.fill();
+            // Spire
+            ctx.beginPath();
+            ctx.moveTo(b.bx, b.by - b.bW * 0.32);
+            ctx.lineTo(b.bx, b.by - b.bW * 0.32 - b.bH * 0.22);
+            ctx.lineWidth = 2.2;
+            ctx.strokeStyle = '#bcd';
+            ctx.globalAlpha = 0.7;
+            ctx.stroke();
+        } else if (b.type === 2) {
+            // Tall spire tip
+            ctx.beginPath();
+            ctx.moveTo(b.bx, b.by);
+            ctx.lineTo(b.bx, b.by - b.bH * 0.7);
+            ctx.lineWidth = 3.5;
+            ctx.strokeStyle = b.domeColor;
+            ctx.globalAlpha = 0.8;
+            ctx.stroke();
+            // Spire tip
+            ctx.beginPath();
+            ctx.arc(b.bx, b.by - b.bH * 0.7, b.bW * 0.18, 0, Math.PI * 2);
+            ctx.fillStyle = b.domeColor;
+            ctx.globalAlpha = 0.8;
+            ctx.shadowColor = '#fff8';
+            ctx.shadowBlur = 6;
+            ctx.fill();
+        } else if (b.type === 3) {
+            // Round tower dome
+            ctx.beginPath();
+            ctx.ellipse(b.bx, b.by, b.bW * 0.5, b.bW * 0.32, 0, 0, Math.PI * 2);
+            ctx.fillStyle = b.domeColor;
+            ctx.globalAlpha = 0.7;
+            ctx.shadowColor = '#fff8';
+            ctx.shadowBlur = 6;
+            ctx.fill();
+        } else {
+            // Default dome
+            ctx.beginPath();
+            ctx.ellipse(b.bx, b.by, b.bW * 0.5, b.bW * 0.32, 0, 0, Math.PI * 2);
+            ctx.fillStyle = b.domeColor;
+            ctx.globalAlpha = 0.7;
+            ctx.shadowColor = '#fff8';
+            ctx.shadowBlur = 6;
+            ctx.fill();
+            // Spire
+            ctx.beginPath();
+            ctx.moveTo(b.bx, b.by - b.bW * 0.32);
+            ctx.lineTo(b.bx, b.by - b.bW * 0.32 - b.bH * 0.22);
+            ctx.lineWidth = 2.2;
+            ctx.strokeStyle = '#bcd';
+            ctx.globalAlpha = 0.7;
+            ctx.stroke();
+        }
         ctx.restore();
     }
 
     // Draw turtle body (shell, legs, head, tail) every frame
+    // Tail (centered, behind shell)
+    ctx.save();
+    ctx.beginPath();
+    ctx.ellipse(centerX, baseY + shellH * 1.08, shellW * 0.08, shellH * 0.18, 0, 0, Math.PI * 2);
+    ctx.fillStyle = '#4a6c4a';
+    ctx.globalAlpha = 0.7;
+    ctx.shadowColor = '#000a';
+    ctx.shadowBlur = 4;
+    ctx.fill();
+    ctx.restore();
     // Shell
     ctx.save();
     ctx.beginPath();
@@ -149,18 +246,6 @@ function animate(ctx, t, width, height) {
     ctx.globalAlpha = 0.8;
     ctx.fill();
     ctx.restore();
-
-    // Tail (centered, behind shell)
-    ctx.save();
-    ctx.beginPath();
-    ctx.ellipse(centerX, baseY + shellH * 1.08, shellW * 0.08, shellH * 0.18, 0, 0, Math.PI * 2);
-    ctx.fillStyle = '#4a6c4a';
-    ctx.globalAlpha = 0.7;
-    ctx.shadowColor = '#000a';
-    ctx.shadowBlur = 4;
-    ctx.fill();
-    ctx.restore();
-
 }
 
 function onResize({ canvas, ctx, width, height }) {
