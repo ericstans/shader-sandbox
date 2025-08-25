@@ -192,6 +192,11 @@ function animate(ctx, t, width, height) {
     ctx._rainstickW = width;
     ctx._rainstickH = height;
   }
+
+  // --- Physics rate control: run physics at half the render rate ---
+  if (typeof animate._physicsFrame === 'undefined') animate._physicsFrame = 0;
+  animate._physicsFrame++;
+  let doPhysics = (animate._physicsFrame % 2 === 0);
   // --- UI: Add slider for number of balls, dropdown for sound type, and slider for bandpass Q ---
   if (uiElements && uiElements.slider) {
     uiElements.slider.value = NUM_PEBBLES;
@@ -399,137 +404,141 @@ function animate(ctx, t, width, height) {
     });
   }
 
-  // Physics for pebbles
-  let sinA = Math.sin(state.angle), cosA = Math.cos(state.angle);
-  const RADIUS = 5;
-  for (let i = 0; i < state.pebbles.length; i++) {
-    let pebble = state.pebbles[i];
-    // Gravity along stick
-    pebble.vx += GRAVITY * sinA;
-    pebble.vy += GRAVITY * cosA;
-    pebble.vx *= FRICTION;
-    pebble.vy *= FRICTION;
-    // Zero out tiny velocities for rest
-    if (Math.abs(pebble.vx) < REST_THRESHOLD) pebble.vx = 0;
-    if (Math.abs(pebble.vy) < REST_THRESHOLD) pebble.vy = 0;
-    pebble.x += pebble.vx;
-    pebble.y += pebble.vy;
-    // Improved wall collision
-    const WALL_THRESHOLD = 0.5;
-    if (pebble.y < 0) { pebble.y = 0; pebble.vy *= -0.2; }
-    if (pebble.y > STICK_RADIUS * 2) {
-      pebble.y = STICK_RADIUS * 2;
-      pebble.vy *= -0.2;
-    }
+  // Physics for pebbles (run at half rate)
+  if (doPhysics) {
+    let sinA = Math.sin(state.angle), cosA = Math.cos(state.angle);
+    const RADIUS = 5;
+    for (let i = 0; i < state.pebbles.length; i++) {
+      let pebble = state.pebbles[i];
+      // Gravity along stick
+      pebble.vx += GRAVITY * sinA;
+      pebble.vy += GRAVITY * cosA;
+      pebble.vx *= FRICTION;
+      pebble.vy *= FRICTION;
+      // Zero out tiny velocities for rest
+      if (Math.abs(pebble.vx) < REST_THRESHOLD) pebble.vx = 0;
+      if (Math.abs(pebble.vy) < REST_THRESHOLD) pebble.vy = 0;
+      pebble.x += pebble.vx;
+      pebble.y += pebble.vy;
+      // Improved wall collision
+      const WALL_THRESHOLD = 0.5;
+      if (pebble.y < 0) { pebble.y = 0; pebble.vy *= -0.2; }
+      if (pebble.y > STICK_RADIUS * 2) {
+        pebble.y = STICK_RADIUS * 2;
+        pebble.vy *= -0.2;
+      }
 
-    // Extra damping near the bottom to help balls settle
-    if (pebble.y > STICK_RADIUS * 2 - 2 && Math.abs(pebble.vy) < 0.5 && Math.abs(pebble.vx) < 0.5) {
-      pebble.vx *= 0.7;
-      pebble.vy *= 0.7;
-      // If very slow, stop completely
-      if (Math.abs(pebble.vy) < 0.08 && Math.abs(pebble.vx) < 0.08) {
-        pebble.vx = 0;
-        pebble.vy = 0;
-      }
-    }
-    // Center wall (lengthwise)
-    if (Math.abs(pebble.y - STICK_RADIUS) < 2.5) {
-      // If pebble is about to cross the wall, push it back
-      if (pebble.y < STICK_RADIUS) {
-        pebble.y = STICK_RADIUS - 2.5;
-        if (pebble.vy > 0) pebble.vy *= -0.2;
-      } else {
-        pebble.y = STICK_RADIUS + 2.5;
-        if (pebble.vy < 0) pebble.vy *= -0.2;
-      }
-    }
-    // Left wall
-    if (pebble.x <= WALL_THRESHOLD) {
-      if (pebble.x < 0) { pebble.x = 0; pebble.vx *= -0.2; }
-    }
-    // Right wall
-    if (pebble.x >= STICK_LENGTH - WALL_THRESHOLD) {
-      if (pebble.x > STICK_LENGTH) { pebble.x = STICK_LENGTH; pebble.vx *= -0.2; }
-    }
-    // Collide with pins
-    for (let pinIdx = 0; pinIdx < state.pins.length; pinIdx++) {
-      let pin = state.pins[pinIdx];
-      let dx = pebble.x - pin.x;
-      let dy = pebble.y - pin.y;
-      let dist = Math.sqrt(dx * dx + dy * dy);
-      if (dist < 6) {
-        // Only play sound if speed before bounce is above threshold and not hitting same pin as last time or the one before
-        let preSpeed = Math.sqrt(pebble.vx * pebble.vx + pebble.vy * pebble.vy);
-        // Simple bounce with energy loss
-        let nx = dx / (dist || 1);
-        let ny = dy / (dist || 1);
-        pebble.vx += nx * 0.8;
-        pebble.vy += ny * 0.8;
-        // Slow down the pebble to simulate energy loss
-        pebble.vx *= 0.5;
-        pebble.vy *= 0.5;
-        if (
-          preSpeed > MIN_SOUND_SPEED &&
-          pebble.lastPin !== pinIdx &&
-          pebble.prevPin !== pinIdx
-        ) {
-          // Map speed to velocity: min 0.25, max 1.0
-          let minV = 0.25, maxV = 1.0, maxSpeed = 6;
-          let velocity = minV + Math.min(1, (preSpeed - MIN_SOUND_SPEED) / (maxSpeed - MIN_SOUND_SPEED)) * (maxV - minV);
-          state.soundQueue.push({ x: pebble.x, y: pebble.y, t: performance.now(), speed: velocity, pebbleIdx: i });
-          pebble.prevPin = pebble.lastPin;
-          pebble.lastPin = pinIdx;
+      // Extra damping near the bottom to help balls settle
+      if (pebble.y > STICK_RADIUS * 2 - 2 && Math.abs(pebble.vy) < 0.5 && Math.abs(pebble.vx) < 0.5) {
+        pebble.vx *= 0.7;
+        pebble.vy *= 0.7;
+        // If very slow, stop completely
+        if (Math.abs(pebble.vy) < 0.08 && Math.abs(pebble.vx) < 0.08) {
+          pebble.vx = 0;
+          pebble.vy = 0;
         }
-      } else if (pebble.lastPin === pinIdx) {
-        // Only reset lastPin if not colliding with any pin
-        // (Do not reset on wall or other collisions)
-        let stillOnAnyPin = false;
-        for (let k = 0; k < state.pins.length; k++) {
-          if (k !== pinIdx) {
-            let p2 = state.pins[k];
-            let dx2 = pebble.x - p2.x;
-            let dy2 = pebble.y - p2.y;
-            let dist2 = Math.sqrt(dx2 * dx2 + dy2 * dy2);
-            if (dist2 < 6) {
-              stillOnAnyPin = true;
-              break;
+      }
+      // Center wall (lengthwise)
+      if (Math.abs(pebble.y - STICK_RADIUS) < 2.5) {
+        // If pebble is about to cross the wall, push it back
+        if (pebble.y < STICK_RADIUS) {
+          pebble.y = STICK_RADIUS - 2.5;
+          if (pebble.vy > 0) pebble.vy *= -0.2;
+        } else {
+          pebble.y = STICK_RADIUS + 2.5;
+          if (pebble.vy < 0) pebble.vy *= -0.2;
+        }
+      }
+      // Left wall
+      if (pebble.x <= WALL_THRESHOLD) {
+        if (pebble.x < 0) { pebble.x = 0; pebble.vx *= -0.2; }
+      }
+      // Right wall
+      if (pebble.x >= STICK_LENGTH - WALL_THRESHOLD) {
+        if (pebble.x > STICK_LENGTH) { pebble.x = STICK_LENGTH; pebble.vx *= -0.2; }
+      }
+      // Collide with pins
+      for (let pinIdx = 0; pinIdx < state.pins.length; pinIdx++) {
+        let pin = state.pins[pinIdx];
+        let dx = pebble.x - pin.x;
+        let dy = pebble.y - pin.y;
+        let dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < 6) {
+          // Only play sound if speed before bounce is above threshold and not hitting same pin as last time or the one before
+          let preSpeed = Math.sqrt(pebble.vx * pebble.vx + pebble.vy * pebble.vy);
+          // Simple bounce with energy loss
+          let nx = dx / (dist || 1);
+          let ny = dy / (dist || 1);
+          pebble.vx += nx * 0.8;
+          pebble.vy += ny * 0.8;
+          // Slow down the pebble to simulate energy loss
+          pebble.vx *= 0.5;
+          pebble.vy *= 0.5;
+          if (
+            preSpeed > MIN_SOUND_SPEED &&
+            pebble.lastPin !== pinIdx &&
+            pebble.prevPin !== pinIdx
+          ) {
+            // Map speed to velocity: min 0.25, max 1.0
+            let minV = 0.25, maxV = 1.0, maxSpeed = 6;
+            let velocity = minV + Math.min(1, (preSpeed - MIN_SOUND_SPEED) / (maxSpeed - MIN_SOUND_SPEED)) * (maxV - minV);
+            state.soundQueue.push({ x: pebble.x, y: pebble.y, t: performance.now(), speed: velocity, pebbleIdx: i });
+            pebble.prevPin = pebble.lastPin;
+            pebble.lastPin = pinIdx;
+          }
+        } else if (pebble.lastPin === pinIdx) {
+          // Only reset lastPin if not colliding with any pin
+          // (Do not reset on wall, center wall, or other collisions)
+          let stillOnAnyPin = false;
+          for (let k = 0; k < state.pins.length; k++) {
+            if (k !== pinIdx) {
+              let p2 = state.pins[k];
+              let dx2 = pebble.x - p2.x;
+              let dy2 = pebble.y - p2.y;
+              let dist2 = Math.sqrt(dx2 * dx2 + dy2 * dy2);
+              if (dist2 < 6) {
+                stillOnAnyPin = true;
+                break;
+              }
             }
           }
-        }
-        if (!stillOnAnyPin) {
-          pebble.lastPin = -1;
+          // Also, do not reset if pebble is in contact with the center wall
+          let onCenterWall = Math.abs(pebble.y - STICK_RADIUS) < 2.5;
+          if (!stillOnAnyPin && !onCenterWall) {
+            pebble.lastPin = -1;
+          }
         }
       }
-    }
-    // Collide with other pebbles
-    for (let j = i + 1; j < state.pebbles.length; j++) {
-      let other = state.pebbles[j];
-      let dx = pebble.x - other.x;
-      let dy = pebble.y - other.y;
-      let dist = Math.sqrt(dx * dx + dy * dy);
-      if (dist < RADIUS * 2 && dist > 0) {
-        // Push them apart
-        let overlap = RADIUS * 2 - dist;
-        let nx = dx / dist;
-        let ny = dy / dist;
-        pebble.x += nx * overlap / 2;
-        pebble.y += ny * overlap / 2;
-        other.x -= nx * overlap / 2;
-        other.y -= ny * overlap / 2;
-        // If both are nearly at rest, damp their velocities to zero
-        let v1 = Math.sqrt(pebble.vx * pebble.vx + pebble.vy * pebble.vy);
-        let v2 = Math.sqrt(other.vx * other.vx + other.vy * other.vy);
-        if (v1 < REST_THRESHOLD && v2 < REST_THRESHOLD) {
-          pebble.vx = 0; pebble.vy = 0;
-          other.vx = 0; other.vy = 0;
-        } else {
-          // Exchange velocity (simple elastic)
-          let tx = pebble.vx;
-          let ty = pebble.vy;
-          pebble.vx = other.vx;
-          pebble.vy = other.vy;
-          other.vx = tx;
-          other.vy = ty;
+      // Collide with other pebbles
+      for (let j = i + 1; j < state.pebbles.length; j++) {
+        let other = state.pebbles[j];
+        let dx = pebble.x - other.x;
+        let dy = pebble.y - other.y;
+        let dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < RADIUS * 2 && dist > 0) {
+          // Push them apart
+          let overlap = RADIUS * 2 - dist;
+          let nx = dx / dist;
+          let ny = dy / dist;
+          pebble.x += nx * overlap / 2;
+          pebble.y += ny * overlap / 2;
+          other.x -= nx * overlap / 2;
+          other.y -= ny * overlap / 2;
+          // If both are nearly at rest, damp their velocities to zero
+          let v1 = Math.sqrt(pebble.vx * pebble.vx + pebble.vy * pebble.vy);
+          let v2 = Math.sqrt(other.vx * other.vx + other.vy * other.vy);
+          if (v1 < REST_THRESHOLD && v2 < REST_THRESHOLD) {
+            pebble.vx = 0; pebble.vy = 0;
+            other.vx = 0; other.vy = 0;
+          } else {
+            // Exchange velocity (simple elastic)
+            let tx = pebble.vx;
+            let ty = pebble.vy;
+            pebble.vx = other.vx;
+            pebble.vy = other.vy;
+            other.vx = tx;
+            other.vy = ty;
+          }
         }
       }
     }
