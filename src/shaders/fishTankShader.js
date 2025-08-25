@@ -3,7 +3,9 @@
 
 const displayName = 'Fish Tank';
 
-
+const EGG_LAYING_PROBABILITY = 1/150;
+const NET_PROBABILITY = 1/2048;
+const NET_SPEED = 1/30000
 let fish = [];
 let netEvent = null;
 let scoopedFish = [];
@@ -102,7 +104,7 @@ function addFoodPellet(x, y) {
     }
 }
 
-// Handle click event to add food pellet
+// Handle click event to add food pellet or start net event
 function onClick(e, {canvas, ctx, width, height}) {
     // Convert mouse event to canvas coordinates, accounting for pan/zoom
     let rect = canvas.getBoundingClientRect();
@@ -115,6 +117,32 @@ function onClick(e, {canvas, ctx, width, height}) {
     let y = (typeof window.viewZoom === 'number' ? (rawY - (window.viewOffsetY || 0)) / (window.viewZoom || 1) : rawY);
     // Only add food if inside tank (not on wall)
     const wallW = 10;
+    if (e.button === 1) {
+        // Middle click: start net event at click X
+        if (!netEvent) {
+            let pivotX = x;
+            let pivotY = -height * 0.5 - 60;
+            let poleLenBase = height * 0.8;
+            let poleLen = poleLenBase * (Math.random()*1.5);
+            let netRadius = 60 + Math.random()*40;
+            let netAngleStart = 0;
+            let netAngleEnd = 180;
+            let swingDir = Math.random() < 0.5 ? 1 : -1;
+            netEvent = {
+                pivotX,
+                pivotY,
+                poleLen,
+                netRadius,
+                t: 0,
+                swingDir,
+                netAngleStart,
+                netAngleEnd,
+                scooped: false
+            };
+        }
+        e.preventDefault();
+        return;
+    }
     if (x > wallW && x < width-wallW && y > wallW && y < height-wallW) {
         addFoodPellet(x, y);
     }
@@ -267,12 +295,12 @@ function drawFish(ctx, f, t) {
         ctx.strokeStyle = '#e0f8d0';
         ctx.fillStyle = '#e0f8d0';
         let nSpikes = 7;
-        let bodyLen = f.size * f.species.body.rx * 2;
+        let bodyLen = f.size * f.species.body.rx * 1.8;
         let bodyTopY = -f.size * f.species.body.ry;
-        for (let i = 0; i < nSpikes; i++) {
+        for (let i = 1; i < nSpikes-3; i++) {
             let frac = i / (nSpikes-1);
             let spikeX = -f.size*f.species.body.rx + frac*bodyLen;
-            let spikeY = bodyTopY;
+            let spikeY = bodyTopY+5;
             let spikeH = f.size * 0.22 + Math.sin(t*0.5 + i)*f.size*0.03;
             ctx.beginPath();
             ctx.moveTo(spikeX, spikeY);
@@ -349,6 +377,7 @@ function drawCaustics(ctx, width, height, t) {
     ctx.restore();
 }
 
+const newLocal = 1 / 50;
 function animate(ctx, t, width, height) {
      // draw background first
     // Draw tank walls
@@ -368,7 +397,7 @@ function animate(ctx, t, width, height) {
     ctx.fillStyle = grad;
     ctx.fillRect(wallW,wallW,width-2*wallW,height-2*wallW);
     // Rare random event: cartoon net on a pole swings in from the top
-    if (!netEvent && Math.random() < 1/1024) {
+    if (!netEvent && Math.random() < NET_PROBABILITY) {
         // Net pivots from a point off the top of the screen
         let pivotX = Math.random() * (width * 0.7) + width*0.15;
         let pivotY = -height * 0.5 - 60;
@@ -394,7 +423,7 @@ function animate(ctx, t, width, height) {
     if (netEvent) {
         // Animate net swinging down
         netEvent.t++;
-        let swingT = Math.min(1, netEvent.t / 15000);
+    let swingT = Math.min(1, netEvent.t * NET_SPEED);
         let angle = netEvent.netAngleStart + (netEvent.netAngleEnd - netEvent.netAngleStart) * swingT * netEvent.swingDir;
         // Net position at end of pole
         let netX = netEvent.pivotX + Math.cos(angle) * netEvent.poleLen;
@@ -584,7 +613,7 @@ function animate(ctx, t, width, height) {
         }
 
         // Sturgeon predation: eat other fish they encounter
-        if (f.species && f.species.name === 'Sturgeon') {
+        if (f.species && f.species.name === 'Sturgeon' && f.behavior === 'lookForFood') {
             for (let j = 0; j < fish.length; j++) {
                 if (i === j) continue;
                 let prey = fish[j];
@@ -605,7 +634,7 @@ function animate(ctx, t, width, height) {
         f.behaviorTimer--;
         if (f.behaviorTimer <= 0) {
             // Rare chance: lay eggs (unless 50 or more fish)
-            if (fish.length < 1000 && Math.random() < 1/2) {
+            if (fish.length < 1000 && Math.random() < EGG_LAYING_PROBABILITY) {
                 // If Eyeball Fish, lay way more eggs
                 let isEyeball = f.species && f.species.name === 'Eyeball Fish';
                 let numEggs = isEyeball ? (18 + Math.floor(Math.random()*10)) : (2 + Math.floor(Math.random()*4));
