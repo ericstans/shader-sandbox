@@ -17,7 +17,7 @@ let foodPellets = [];
 // Lily pads
 let lilyPads = [];
 const MAX_LILY_PADS = 8;
-const LILY_PAD_SPAWN_CHANCE = 1/3000; // chance per frame
+const LILY_PAD_SPAWN_CHANCE = 1/3 //1/3000; // chance per frame
 
 // Add a food pellet at (x, y)
 // Generate static decorations for the tank floor
@@ -380,7 +380,12 @@ function animate(ctx, t, width, height) {
         let padY = wallW + padH/2 + Math.random()*8;
         let rot = Math.random()*Math.PI*0.2 - 0.4;
         let color = 'hsl(' + (90+Math.random()*30) + ', 60%, 38%)';
-        lilyPads.push({x: padX, y: padY, w: padW, h: padH, rot, color});
+        let skew = Math.random()*0.2 - 0.1;
+        // 20% chance for a bug, 10% for a flower, mutually exclusive
+        let hasBug = Math.random() < 0.2;
+        let hasFlower = !hasBug && Math.random() < 0.1;
+        let bugType = hasBug ? (Math.random() < 0.5 ? 'ladybug' : 'bee') : null;
+        lilyPads.push({x: padX, y: padY, w: padW, h: padH, rot, color, skew, hasBug, hasFlower, bugType});
     }
 
     // Draw lily pads (float at top)
@@ -389,22 +394,118 @@ function animate(ctx, t, width, height) {
             // Animate floating left/right
             let floatX = pad.x + Math.sin(t*0.22 + pad.x*0.013) * 18;
             ctx.translate(floatX, pad.y);
-            ctx.rotate(pad.rot + Math.sin(t*0.1+pad.x*0.01)*0.08);
             // Perspective skew: compress Y, skew X by a small amount
-            let skew = 0.35; // controls the amount of perspective skew
-            ctx.transform(1, 0, skew, 0.65, 0, 0); // [a, b, c, d, e, f]
-            ctx.beginPath();
-            ctx.ellipse(0, 0, pad.w, pad.h, 0, 0, Math.PI*2);
-            // Notch
-            ctx.moveTo(0,0);
-            ctx.arc(0, 0, pad.w, -Math.PI/8, Math.PI/8, false);
-            ctx.lineTo(0,0);
-            ctx.closePath();
-            ctx.fillStyle = pad.color;
-            ctx.globalAlpha = 0.82;
-            ctx.shadowColor = '#1a3a1a';
-            ctx.shadowBlur = 8;
-            ctx.fill();
+            ctx.transform(1, 0, pad.skew, 0.65, 0, 0); // [a, b, c, d, e, f]
+            ctx.rotate(pad.rot + Math.sin(t*0.1+pad.x*0.01)*0.08);
+            
+
+        // Radial gradient for shading/highlight
+        let grad = ctx.createRadialGradient(0, 0, pad.w*0.1, 0, 0, pad.w);
+        grad.addColorStop(0, 'rgba(255,255,255,0.18)');
+        grad.addColorStop(0.5, pad.color);
+        grad.addColorStop(1, 'rgba(40,80,30,0.7)');
+        ctx.beginPath();
+        ctx.ellipse(0, 0, pad.w, pad.h, 0, 0, Math.PI*2);
+        // Notch
+        ctx.moveTo(0,0);
+        ctx.arc(0, 0, pad.w, -Math.PI/8, Math.PI/8, false);
+        ctx.lineTo(0,0);
+        ctx.closePath();
+        ctx.fillStyle = grad;
+        ctx.globalAlpha = 0.82;
+        ctx.shadowColor = '#1a3a1a';
+        ctx.shadowBlur = 8;
+        ctx.fill();
+
+            // Draw veins: subtle curved lines from center to edge
+            ctx.save();
+            ctx.globalAlpha = 0.18;
+            ctx.strokeStyle = '#eaf7d0';
+            ctx.lineWidth = 1.1;
+            let nVeins = 7 + Math.floor(pad.w/10);
+            for (let i = 0; i < nVeins; i++) {
+                let angle = -Math.PI/8 + (i/(nVeins-1)) * (Math.PI/4);
+                ctx.beginPath();
+                ctx.moveTo(0, 0);
+                // Curve outward: control point is 1/2 out, offset for curve
+                let cpR = pad.w * 0.45;
+                let cpA = angle + (i%2===0 ? 0.18 : -0.18);
+                let endR = pad.w * 0.98;
+                let endA = angle;
+                ctx.quadraticCurveTo(
+                    Math.cos(cpA)*cpR, Math.sin(cpA)*cpR*0.7,
+                    Math.cos(endA)*endR, Math.sin(endA)*endR*0.7
+                );
+                ctx.stroke();
+            }
+            // Draw bug or flower if present
+            if (pad.hasBug) {
+                ctx.save();
+                // Place bug near edge, random angle
+                let bugA = Math.PI/2 + Math.sin(pad.x)*1.2;
+                let bugR = pad.w * 0.68;
+                let bx = Math.cos(bugA)*bugR;
+                let by = Math.sin(bugA)*bugR*0.7;
+                ctx.translate(bx, by);
+                ctx.rotate(bugA + Math.PI/2);
+                if (pad.bugType === 'ladybug') {
+                    // Ladybug: red oval with black spots
+                    ctx.beginPath();
+                    ctx.ellipse(0, 0, 6, 4, 0, 0, Math.PI*2);
+                    ctx.fillStyle = '#d22';
+                    ctx.globalAlpha = 0.95;
+                    ctx.fill();
+                    ctx.beginPath();
+                    ctx.arc(0, -2, 2, 0, Math.PI*2);
+                    ctx.fillStyle = '#222';
+                    ctx.fill();
+                    // Spots
+                    ctx.beginPath(); ctx.arc(-2, 0, 0.7, 0, Math.PI*2); ctx.arc(2, 0, 0.7, 0, Math.PI*2);
+                    ctx.fillStyle = '#222'; ctx.fill();
+                } else if (pad.bugType === 'bee') {
+                    // Bee: yellow oval with black stripes
+                    ctx.beginPath();
+                    ctx.ellipse(0, 0, 6, 3.5, 0, 0, Math.PI*2);
+                    ctx.fillStyle = '#ffb800';
+                    ctx.globalAlpha = 0.95;
+                    ctx.fill();
+                    // Stripes
+                    ctx.beginPath(); ctx.moveTo(-2, -2); ctx.lineTo(-2, 2);
+                    ctx.moveTo(0, -2.5); ctx.lineTo(0, 2.5);
+                    ctx.moveTo(2, -2); ctx.lineTo(2, 2);
+                    ctx.strokeStyle = '#222'; ctx.lineWidth = 1.1; ctx.stroke();
+                    // Head
+                    ctx.beginPath(); ctx.arc(0, -2.5, 1.2, 0, Math.PI*2); ctx.fillStyle = '#222'; ctx.fill();
+                }
+                ctx.restore();
+            } else if (pad.hasFlower) {
+                ctx.save();
+                // Place flower near edge, random angle
+                let flowerA = -Math.PI/3 + Math.sin(pad.x*0.7)*0.7;
+                let flowerR = pad.w * 0.62;
+                let fx = Math.cos(flowerA)*flowerR;
+                let fy = Math.sin(flowerA)*flowerR*0.7;
+                ctx.translate(fx, fy);
+                ctx.rotate(flowerA);
+                // Draw simple white flower with yellow center
+                for (let i = 0; i < 6; i++) {
+                    ctx.save();
+                    ctx.rotate((Math.PI*2/6)*i);
+                    ctx.beginPath();
+                    ctx.ellipse(0, 4, 2.2, 5, 0, 0, Math.PI*2);
+                    ctx.fillStyle = '#fff';
+                    ctx.globalAlpha = 0.92;
+                    ctx.fill();
+                    ctx.restore();
+                }
+                ctx.beginPath();
+                ctx.arc(0, 0, 2.2, 0, Math.PI*2);
+                ctx.fillStyle = '#ffe066';
+                ctx.globalAlpha = 0.98;
+                ctx.fill();
+                ctx.restore();
+            }
+            ctx.restore();
             ctx.restore();
         }
     // Rare random event: cartoon net on a pole swings in from the top
