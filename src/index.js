@@ -59,22 +59,6 @@ if (noSelectParam) {
 	}
 }
 
-// Hide shader-select-container and make canvas fill the view if 'bigmode' param is present
-let bigModeParam = new URLSearchParams(window.location.search).get('bigmode');
-if (bigModeParam !== null) {
-	if (shaderSelectContainer) shaderSelectContainer.classList.add('hidden');
-	// Make canvas fill the view container
-	const container = document.getElementById('shader-container');
-	if (container && canvas) {
-		canvas.style.width = '100vw';
-		canvas.style.height = '100vh';
-		canvas.style.maxWidth = '100vw';
-		canvas.style.maxHeight = '100vh';
-		canvas.width = '100vw';
-		canvas.height = '100vh';
-	}
-}
-
 // After populating the shader dropdown and setting selectedIndex, update picklist visibility
 setTimeout(() => {
 	if (glyphStyleDropdownContainer && select) {
@@ -85,6 +69,40 @@ setTimeout(() => {
 
 
 // Canvas and context setup
+// Borderless mode logic
+const borderlessParam = new URLSearchParams(window.location.search).get('borderless');
+if (borderlessParam) {
+	// Hide shader select container
+	const shaderSelectContainer = document.getElementById('shader-select-container');
+	if (shaderSelectContainer) shaderSelectContainer.style.display = 'none';
+	// Remove max-width/max-height from canvas, shader-container, shader-inner-container
+	const canvasEl = document.getElementById('plasma-canvas');
+	const shaderContainer = document.getElementById('shader-container');
+	const shaderInnerContainer = document.querySelector('.shader-inner-container');
+	if (canvasEl) {
+		canvasEl.style.maxWidth = '';
+		canvasEl.style.maxHeight = '';
+		canvasEl.style.width = '100vw';
+		canvasEl.style.height = '100vh';
+	}
+	if (shaderContainer) {
+		shaderContainer.style.maxWidth = '';
+		shaderContainer.style.maxHeight = '';
+		shaderContainer.style.width = '100vw';
+		shaderContainer.style.height = '100vh';
+	}
+	if (shaderInnerContainer) {
+		shaderInnerContainer.style.maxWidth = '';
+		shaderInnerContainer.style.maxHeight = '';
+		shaderInnerContainer.style.width = '100vw';
+		shaderInnerContainer.style.height = '100vh';
+	}
+	// Resize canvas pixels to match window
+	if (canvasEl) {
+		canvasEl.width = window.innerWidth;
+		canvasEl.height = window.innerHeight;
+	}
+}
 
 const canvas = document.getElementById('plasma-canvas');
 const ctx = canvas.getContext('2d');
@@ -165,8 +183,8 @@ function createFullscreenButton() {
 			canvas.style.width = '';
 			canvas.style.height = '';
 			canvas.style.zIndex = '';
-			canvas.style.maxWidth = origMaxWidth;
-			canvas.style.maxHeight = origMaxHeight;
+			canvas.style.maxWidth = '';
+			canvas.style.maxHeight = '';
 			// Restore canvas pixel size
 			canvas.width = origCanvasWidth;
 			canvas.height = origCanvasHeight;
@@ -338,8 +356,9 @@ window.addEventListener('mouseup', (e) => {
 function resizeCanvas() {
 	// If in fullscreen, use full window size
 	const isFullscreen = document.fullscreenElement === (document.getElementById('shader-container') || canvas.parentElement);
+	const isBorderless = new URLSearchParams(window.location.search).get('borderless');
 	let size;
-	if (isFullscreen) {
+	if (isFullscreen || isBorderless) {
 		canvas.width = window.innerWidth;
 		canvas.height = window.innerHeight;
 		width = window.innerWidth;
