@@ -1,3 +1,7 @@
+function onResize({ canvas, ctx, width, height }) {
+    console.log('onResize')
+    tankDecor = null;
+}
 // Fish Tank Shader: animated fish, bubbles, and water caustics
 // Exports: { displayName, animate, onResize }
 
@@ -1139,5 +1143,6 @@ function animate(ctx, t, width, height) {
 export default {
     displayName,
     animate,
-    onClick
+    onClick,
+    onResize
 };

@@ -392,6 +392,14 @@ function resizeCanvas() {
 	}
 	imageData = ctx.getImageData(0, 0, width, height);
 	data = imageData.data;
+
+	// Call the current shader's onResize handler if it exists
+	if (typeof currentShader !== 'undefined' && shaders[currentShader]) {
+		const shaderObj = shaders[currentShader].shader || shaders[currentShader];
+		if (typeof shaderObj.onResize === 'function') {
+			shaderObj.onResize({ canvas, ctx, width, height });
+		}
+	}
 }
 
 window.addEventListener('resize', resizeCanvas);
