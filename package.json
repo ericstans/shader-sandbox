@@ -5,7 +5,8 @@
   "main": "src/index.js",
   "scripts": {
     "start": "webpack serve --mode development --open",
-    "build": "webpack --mode production"
+    "build": "webpack --mode production",
+    "test": "jest"
   },
   "author": "",
   "license": "MIT",
@@ -13,15 +14,22 @@
     "p5": "^1.9.0",
     "p5.sound": "^0.2.0"
   },
+  "type": "module",
+  "jest": {
+    "transform": {
+      "^.+\\.js$": "babel-jest"
+    }
+  },
   "devDependencies": {
     "@babel/core": "^7.24.0",
     "@babel/preset-env": "^7.24.0",
     "babel-loader": "^9.1.3",
+    "css-loader": "^6.8.1",
     "html-webpack-plugin": "^5.5.0",
+    "jest": "^30.0.5",
+    "style-loader": "^3.3.4",
     "webpack": "^5.91.0",
     "webpack-cli": "^5.1.4",
-    "webpack-dev-server": "^4.15.1",
-    "style-loader": "^3.3.4",
-    "css-loader": "^6.8.1"
+    "webpack-dev-server": "^4.15.1"
   }
 }
