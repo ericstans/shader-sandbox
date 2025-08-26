@@ -73,6 +73,7 @@ setTimeout(() => {
 const borderlessParam = new URLSearchParams(window.location.search).get('borderless');
 if (borderlessParam) {
 	// Hide shader select container
+	document.getElementsByTagName('body')[0].classList.add('borderless');
 	const shaderSelectContainer = document.getElementById('shader-select-container');
 	if (shaderSelectContainer) shaderSelectContainer.style.display = 'none';
 	// Remove max-width/max-height from canvas, shader-container, shader-inner-container
