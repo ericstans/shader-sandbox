@@ -39,8 +39,8 @@ if (glyphStyleSelect) {
 			}
 		}
 	});
-// Expose resetGlyphs globally so the picklist can trigger it
-window.resetGlyphs = gridGlyphShader4.resetState;
+	// Expose resetGlyphs globally so the picklist can trigger it
+	window.resetGlyphs = gridGlyphShader4.resetState;
 }
 
 // Ensure the picklist is hidden by default
@@ -51,11 +51,27 @@ if (glyphStyleDropdownContainer) {
 // Hide the picklist if 'noselect' URL parameter is present
 let noSelectParam = new URLSearchParams(window.location.search).get('noselect')
 console.log('noSelectParam', noSelectParam)
-if (noSelectParam){
+if (noSelectParam) {
 	console.log('param found')
 	if (shaderSelectContainer) {
 		shaderSelectContainer.style.display = 'none';
 		console.log('Shader dropdown hidden');
+	}
+}
+
+// Hide shader-select-container and make canvas fill the view if 'bigmode' param is present
+let bigModeParam = new URLSearchParams(window.location.search).get('bigmode');
+if (bigModeParam !== null) {
+	if (shaderSelectContainer) shaderSelectContainer.classList.add('hidden');
+	// Make canvas fill the view container
+	const container = document.getElementById('shader-container');
+	if (container && canvas) {
+		canvas.style.width = '100vw';
+		canvas.style.height = '100vh';
+		canvas.style.maxWidth = '100vw';
+		canvas.style.maxHeight = '100vh';
+		canvas.width = '100vw';
+		canvas.height = '100vh';
 	}
 }
 
@@ -94,92 +110,92 @@ function createFullscreenButton() {
 	fullscreenBtn.style.transition = 'opacity 0.2s';
 	fullscreenBtn.style.opacity = '0.92';
 	fullscreenBtn.title = 'Full screen';
-		fullscreenBtn.addEventListener('click', () => {
-			const container = document.getElementById('shader-container') || canvas.parentElement;
-			if (!document.fullscreenElement) {
-				if (container.requestFullscreen) {
-					container.requestFullscreen();
-				} else if (container.webkitRequestFullscreen) {
-					container.webkitRequestFullscreen();
-				} else if (container.mozRequestFullScreen) {
-					container.mozRequestFullScreen();
-				} else if (container.msRequestFullscreen) {
-					container.msRequestFullscreen();
-				}
-			} else {
-				if (document.exitFullscreen) {
-					document.exitFullscreen();
-				} else if (document.webkitExitFullscreen) {
-					document.webkitExitFullscreen();
-				} else if (document.mozCancelFullScreen) {
-					document.mozCancelFullScreen();
-				} else if (document.msExitFullscreen) {
-					document.msExitFullscreen();
+	fullscreenBtn.addEventListener('click', () => {
+		const container = document.getElementById('shader-container') || canvas.parentElement;
+		if (!document.fullscreenElement) {
+			if (container.requestFullscreen) {
+				container.requestFullscreen();
+			} else if (container.webkitRequestFullscreen) {
+				container.webkitRequestFullscreen();
+			} else if (container.mozRequestFullScreen) {
+				container.mozRequestFullScreen();
+			} else if (container.msRequestFullscreen) {
+				container.msRequestFullscreen();
+			}
+		} else {
+			if (document.exitFullscreen) {
+				document.exitFullscreen();
+			} else if (document.webkitExitFullscreen) {
+				document.webkitExitFullscreen();
+			} else if (document.mozCancelFullScreen) {
+				document.mozCancelFullScreen();
+			} else if (document.msExitFullscreen) {
+				document.msExitFullscreen();
+			}
+		}
+	});
+
+	// Fullscreen UI logic
+	// Store original canvas size
+	let origCanvasWidth = canvas.width;
+	let origCanvasHeight = canvas.height;
+	let origMaxWidth = canvas.style.maxWidth;
+	let origMaxHeight = canvas.style.maxHeight;
+	function setFullscreenUI(isFullscreen) {
+		const select = document.getElementById('shader-select');
+		if (select) {
+			select.style.display = isFullscreen ? 'none' : '';
+		}
+		if (isFullscreen) {
+			canvas.style.position = 'fixed';
+			canvas.style.left = '0';
+			canvas.style.top = '0';
+			canvas.style.width = '100vw';
+			canvas.style.height = '100vh';
+			canvas.style.zIndex = 10000;
+			canvas.style.maxWidth = 'none';
+			canvas.style.maxHeight = 'none';
+			// Set canvas pixel size to match screen
+			canvas.width = window.innerWidth;
+			canvas.height = window.innerHeight;
+		} else {
+			canvas.style.position = '';
+			canvas.style.left = '';
+			canvas.style.top = '';
+			canvas.style.width = '';
+			canvas.style.height = '';
+			canvas.style.zIndex = '';
+			canvas.style.maxWidth = origMaxWidth;
+			canvas.style.maxHeight = origMaxHeight;
+			// Restore canvas pixel size
+			canvas.width = origCanvasWidth;
+			canvas.height = origCanvasHeight;
+		}
+		if (typeof resizeCanvas === 'function') resizeCanvas();
+	}
+	// Also resize canvas if window size changes in fullscreen
+	window.addEventListener('resize', () => {
+		if (document.fullscreenElement === (document.getElementById('shader-container') || canvas.parentElement)) {
+			canvas.width = window.innerWidth;
+			canvas.height = window.innerHeight;
+			if (typeof resizeCanvas === 'function') resizeCanvas();
+		}
+	});
+
+	document.addEventListener('fullscreenchange', () => {
+		setFullscreenUI(!!document.fullscreenElement);
+		// If entering fullscreen and Fish Tank is active, regenerate scenery
+		if (document.fullscreenElement) {
+			// Find the current shader's displayName
+			let shaderObj = shaders[currentShader];
+			let shader = shaderObj && (shaderObj.shader || shaderObj);
+			if (shader && (shader.displayName === 'Fish Tank' || shaderObj.displayName === 'Fish Tank')) {
+				if (typeof shader.onResize === 'function') {
+					shader.onResize({ canvas, ctx, width: canvas.width, height: canvas.height });
 				}
 			}
-		});
-
-		// Fullscreen UI logic
-			// Store original canvas size
-				let origCanvasWidth = canvas.width;
-				let origCanvasHeight = canvas.height;
-				let origMaxWidth = canvas.style.maxWidth;
-				let origMaxHeight = canvas.style.maxHeight;
-			function setFullscreenUI(isFullscreen) {
-				const select = document.getElementById('shader-select');
-				if (select) {
-					select.style.display = isFullscreen ? 'none' : '';
-				}
-					if (isFullscreen) {
-						canvas.style.position = 'fixed';
-						canvas.style.left = '0';
-						canvas.style.top = '0';
-						canvas.style.width = '100vw';
-						canvas.style.height = '100vh';
-						canvas.style.zIndex = 10000;
-						canvas.style.maxWidth = 'none';
-						canvas.style.maxHeight = 'none';
-						// Set canvas pixel size to match screen
-						canvas.width = window.innerWidth;
-						canvas.height = window.innerHeight;
-					} else {
-						canvas.style.position = '';
-						canvas.style.left = '';
-						canvas.style.top = '';
-						canvas.style.width = '';
-						canvas.style.height = '';
-						canvas.style.zIndex = '';
-						canvas.style.maxWidth = origMaxWidth;
-						canvas.style.maxHeight = origMaxHeight;
-						// Restore canvas pixel size
-						canvas.width = origCanvasWidth;
-						canvas.height = origCanvasHeight;
-					}
-				if (typeof resizeCanvas === 'function') resizeCanvas();
-			}
-			// Also resize canvas if window size changes in fullscreen
-			window.addEventListener('resize', () => {
-				if (document.fullscreenElement === (document.getElementById('shader-container') || canvas.parentElement)) {
-					canvas.width = window.innerWidth;
-					canvas.height = window.innerHeight;
-					if (typeof resizeCanvas === 'function') resizeCanvas();
-				}
-			});
-
-			document.addEventListener('fullscreenchange', () => {
-				setFullscreenUI(!!document.fullscreenElement);
-				// If entering fullscreen and Fish Tank is active, regenerate scenery
-				if (document.fullscreenElement) {
-					// Find the current shader's displayName
-					let shaderObj = shaders[currentShader];
-					let shader = shaderObj && (shaderObj.shader || shaderObj);
-					if (shader && (shader.displayName === 'Fish Tank' || shaderObj.displayName === 'Fish Tank')) {
-						if (typeof shader.onResize === 'function') {
-							shader.onResize({ canvas, ctx, width: canvas.width, height: canvas.height });
-						}
-					}
-				}
-			});
+		}
+	});
 	document.body.appendChild(fullscreenBtn);
 }
 
@@ -262,8 +278,8 @@ let viewZoom = 1;
 let viewOffsetX = 0;
 let viewOffsetY = 0;
 let isPanning = false;
-let panStart = {x: 0, y: 0};
-let panOrigin = {x: 0, y: 0};
+let panStart = { x: 0, y: 0 };
+let panOrigin = { x: 0, y: 0 };
 
 canvas.addEventListener('wheel', (e) => {
 	e.preventDefault();
@@ -370,12 +386,12 @@ if (select) {
 	shaders.forEach((s, i) => {
 		const opt = document.createElement('option');
 		opt.value = i;
-		opt.textContent = s.displayName || `Shader ${i+1}`;
+		opt.textContent = s.displayName || `Shader ${i + 1}`;
 		select.appendChild(opt);
 	});
 }
-	// Register the new shader
-	window.registerShader && window.registerShader(seedGrowthShader);
+// Register the new shader
+window.registerShader && window.registerShader(seedGrowthShader);
 
 
 let currentShader = 0;
@@ -442,13 +458,13 @@ if (select) {
 			shaders[currentShader].onResize({ canvas, ctx, width, height });
 		}
 
-	// Update the URL parameter for shader using the displayName (normalized)
-	const url = new URL(window.location.href);
-	let shaderObj = shaders[currentShader];
-	let name = shaderObj.displayName || (shaderObj.shader && shaderObj.shader.displayName) || '';
-	let normalized = name.toLowerCase().replace(/\s+/g, '');
-	url.searchParams.set('shader', normalized);
-	window.history.replaceState({}, '', url);
+		// Update the URL parameter for shader using the displayName (normalized)
+		const url = new URL(window.location.href);
+		let shaderObj = shaders[currentShader];
+		let name = shaderObj.displayName || (shaderObj.shader && shaderObj.shader.displayName) || '';
+		let normalized = name.toLowerCase().replace(/\s+/g, '');
+		url.searchParams.set('shader', normalized);
+		window.history.replaceState({}, '', url);
 	});
 }
 
