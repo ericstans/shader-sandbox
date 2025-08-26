@@ -224,12 +224,12 @@ function drawCars(ctx, w, h, dt) {
     if (car.dir === 'h') {
       // lane 0: top, lane 1: bottom
       py = (car.road + 1) * h / GRID_SIZE + (car.lane === 0 ? -LANE_WIDTH / 2 : LANE_WIDTH / 2);
-      px = car.direction === 1 ? car.pos * w : (1 - car.pos) * w;
+      px = car.pos * w;
       angle = car.direction === 1 ? 0 : Math.PI;
     } else {
       // lane 0: left, lane 1: right
       px = (car.road + 1) * w / GRID_SIZE + (car.lane === 0 ? -LANE_WIDTH / 2 : LANE_WIDTH / 2);
-      py = car.direction === 1 ? car.pos * h : (1 - car.pos) * h;
+      py = car.pos * h;
       angle = car.direction === 1 ? Math.PI / 2 : -Math.PI / 2;
     }
     ctx.save();
@@ -335,52 +335,91 @@ function updateCars(dt, w, h) {
     if (!car.stopped) {
       let delta = (car.speed * dt) / (car.dir === 'h' ? w : h);
       car.pos += car.direction === 1 ? delta : -delta;
-      // Check for intersection crossing and handle turns
-      let crossed = false;
-      if (car.dir === 'h') {
-        if ((car.direction === 1 && car.pos >= 1) || (car.direction === -1 && car.pos <= 0)) crossed = true;
-      } else {
-        if ((car.direction === 1 && car.pos >= 1) || (car.direction === -1 && car.pos <= 0)) crossed = true;
-      }
-      if (crossed) {
-        // At intersection: randomly decide to turn or go straight
-        let turn = Math.random();
-        if (turn < 0.25) { // Left turn
-          if (car.dir === 'h') {
-            car.dir = 'v';
-            car.direction = car.direction === 1 ? -1 : 1; // h->v: right->up, left->down
-            // Set road to intersection index
-            car.road = Math.max(0, Math.min(GRID_SIZE - 1, Math.round(car.pos * (GRID_SIZE - 1))));
-            // Lane assignment for vertical
-            car.lane = car.direction === -1 ? 1 : 0;
-            car.pos = car.direction === 1 ? 0 : 1;
-          } else {
-            car.dir = 'h';
-            car.direction = car.direction === 1 ? -1 : 1; // v->h: down->left, up->right
-            car.road = Math.max(0, Math.min(GRID_SIZE - 1, Math.round(car.pos * (GRID_SIZE - 1))));
-            // Lane assignment for horizontal
-            car.lane = car.direction === -1 ? 0 : 1;
-            car.pos = car.direction === 1 ? 0 : 1;
+      // Turn logic: trigger when car is near the center of an intersection, only once per crossing
+      if (!car._hasTurned) {
+        // Find if car is near the center of any intersection
+        let intersectionCenters = [];
+        for (let j = 0; j < state.intersections.length; j++) {
+          const inter = state.intersections[j];
+          if (car.dir === 'h' && Math.abs((car.road + 1) - inter.y) < 0.2) {
+            intersectionCenters.push(inter.x / GRID_SIZE);
+          } else if (car.dir === 'v' && Math.abs((car.road + 1) - inter.x) < 0.2) {
+            intersectionCenters.push(inter.y / GRID_SIZE);
           }
-        } else if (turn < 0.5) { // Right turn
-          if (car.dir === 'h') {
-            car.dir = 'v';
-            // Right turn keeps direction
-            // h right->v down, h left->v up
-            car.road = Math.max(0, Math.min(GRID_SIZE - 1, Math.round(car.pos * (GRID_SIZE - 1))));
-            car.lane = car.direction === 1 ? 0 : 1;
-            car.pos = car.direction === 1 ? 0 : 1;
-          } else {
-            car.dir = 'h';
-            car.road = Math.max(0, Math.min(GRID_SIZE - 1, Math.round(car.pos * (GRID_SIZE - 1))));
-            car.lane = car.direction === 1 ? 1 : 0;
-            car.pos = car.direction === 1 ? 0 : 1;
+        }
+        for (let c of intersectionCenters) {
+          if (Math.abs(car.pos - c) < 0.03) {
+            // At intersection center: randomly decide to turn or go straight
+            let turn = Math.random();
+            let intersectionIdx = Math.round(c * (GRID_SIZE - 1));
+            // Only allow turns if the new road index is within 1 and GRID_SIZE-2
+            if (turn < 0.25) { // Left turn
+              if (car.dir === 'h') {
+                let newRoad = intersectionIdx;
+                if (newRoad > 0 && newRoad < GRID_SIZE - 1) {
+                  car.dir = 'v';
+                  car.direction = car.direction === 1 ? -1 : 1;
+                  car.road = newRoad;
+                  car.lane = car.direction === -1 ? 1 : 0;
+                  car.pos = car.direction === 1 ? c : c;
+                  car._hasTurned = true;
+                  break;
+                }
+              } else {
+                let newRoad = intersectionIdx;
+                if (newRoad > 0 && newRoad < GRID_SIZE - 1) {
+                  car.dir = 'h';
+                  car.direction = car.direction === 1 ? -1 : 1;
+                  car.road = newRoad;
+                  car.lane = car.direction === -1 ? 0 : 1;
+                  car.pos = car.direction === 1 ? c : c;
+                  car._hasTurned = true;
+                  break;
+                }
+              }
+            } else if (turn < 0.5) { // Right turn
+              if (car.dir === 'h') {
+                let newRoad = intersectionIdx;
+                if (newRoad > 0 && newRoad < GRID_SIZE - 1) {
+                  car.dir = 'v';
+                  car.road = newRoad;
+                  car.lane = car.direction === 1 ? 0 : 1;
+                  car.pos = car.direction === 1 ? c : c;
+                  car._hasTurned = true;
+                  break;
+                }
+              } else {
+                let newRoad = intersectionIdx;
+                if (newRoad > 0 && newRoad < GRID_SIZE - 1) {
+                  car.dir = 'h';
+                  car.road = newRoad;
+                  car.lane = car.direction === 1 ? 1 : 0;
+                  car.pos = car.direction === 1 ? c : c;
+                  car._hasTurned = true;
+                  break;
+                }
+              }
+            }
+            // Go straight: do nothing special, just mark as turned
+            car._hasTurned = true;
+            break;
           }
-        } else { // Go straight
-          if (car.pos > 1) car.pos = 0;
-          if (car.pos < 0) car.pos = 1;
         }
       }
+      // Reset _hasTurned when car is far from all intersection centers
+      let farFromAll = true;
+      for (let j = 0; j < state.intersections.length; j++) {
+        const inter = state.intersections[j];
+        let c = (car.dir === 'h') ? inter.x / GRID_SIZE : inter.y / GRID_SIZE;
+        if (Math.abs(car.pos - c) < 0.05) {
+          farFromAll = false;
+          break;
+        }
+      }
+      if (farFromAll) car._hasTurned = false;
+  // Wrap position if needed
+  if (car.direction === 1 && car.pos > 1) car.pos = 0;
+  if (car.direction === -1 && car.pos < 0) car.pos = 1;
     }
   }
 }
