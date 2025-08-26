@@ -741,9 +741,20 @@ function animate(ctx, t, width, height) {
         ctx.stroke();
         ctx.restore();
     }
-    if (!fish.length || ctx._fishW !== width || ctx._fishH !== height) {
+    if (!fish.length) {
         resetFish(width, height);
         resetBubbles(width, height);
+    }
+    // Clamp fish to new bounds if canvas size changed
+    if (ctx._fishW !== width || ctx._fishH !== height) {
+        const minX = WALL_WIDTH;
+        const maxX = width - WALL_WIDTH;
+        const minY = WALL_WIDTH;
+        const maxY = height - WALL_WIDTH;
+        for (let f of fish) {
+            f.x = Math.max(minX, Math.min(maxX, f.x));
+            f.y = Math.max(minY, Math.min(maxY, f.y));
+        }
         ctx._fishW = width;
         ctx._fishH = height;
     }
