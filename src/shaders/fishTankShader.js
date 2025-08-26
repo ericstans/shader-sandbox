@@ -1,3 +1,26 @@
+
+function onResize({ canvas, ctx, width, height }) {
+    console.log('onResize')
+    tankDecor = null;
+}
+// Fish Tank Shader: animated fish, bubbles, and water caustics
+// Exports: { displayName, animate, onResize }
+
+const displayName = 'Fish Tank';
+const EGG_LAYING_PROBABILITY = 1 / 150;
+const NET_PROBABILITY = 1 / 5000;
+const NET_SPEED = 1 / 30000
+const MAX_LILY_PADS = 8;
+const LILY_PAD_SPAWN_CHANCE = 1 / 3000; // chance per frame
+const WALL_WIDTH = 10;
+let fish = [];
+let netEvent = null;
+let eggs = [];
+let bubbles = [];
+let tankDecor = null;
+let foodPellets = [];
+let lilyPads = [];
+
 // Start a new net event at a random position
 function startNetEvent(width, height) {
     let pivotX = Math.random() * (width * 0.7) + width * 0.15;
@@ -23,30 +46,6 @@ function startNetEvent(width, height) {
         scooped: false
     };
 }
-function onResize({ canvas, ctx, width, height }) {
-    console.log('onResize')
-    tankDecor = null;
-}
-// Fish Tank Shader: animated fish, bubbles, and water caustics
-// Exports: { displayName, animate, onResize }
-
-const displayName = 'Fish Tank';
-const EGG_LAYING_PROBABILITY = 1 / 150;
-const NET_PROBABILITY = 1 / 25000;
-const NET_SPEED = 1 / 30000
-const MAX_LILY_PADS = 8;
-const LILY_PAD_SPAWN_CHANCE = 1/50 //1 / 3000; // chance per frame
-const WALL_WIDTH = 10;
-let fish = [];
-let netEvent = null;
-let scoopedFish = [];
-let eggs = [];
-let bubbles = [];
-let causticPhase = 0;
-let tankDecor = null;
-let foodPellets = [];
-// Lily pads
-let lilyPads = [];
 
 // Add a food pellet at (x, y)
 // Generate static decorations for the tank floor
@@ -118,7 +117,7 @@ function addFoodPellet(x, y) {
         x,
         y,
         r: 5 + Math.random() * 3,
-        vy: 0.35 + Math.random() * 0.18, // slower sinking
+        vy: - 0.35 + Math.random() * 0.18, // floating speed
         eaten: false
     });
     // 25% chance for each fish to switch to 'lookForFood' and target nearest pellet
@@ -541,7 +540,7 @@ function animate(ctx, t, width, height) {
     ctx.fillRect(WALL_WIDTH, 0, width - 2 * WALL_WIDTH, height - WALL_WIDTH);
     // Lily pad spawning logic
     if (lilyPads.length < MAX_LILY_PADS && Math.random() < LILY_PAD_SPAWN_CHANCE) {
-        // Spawn a lily pad at a random X, floating at the top
+        // Spawn a lily pad at a random X, floating at the top, with drop-in animation
         const WALL_WIDTH = 10;
         let padW = 38 + Math.random() * 22;
         let padH = padW * (0.7 + Math.random() * 0.2);
@@ -549,13 +548,16 @@ function animate(ctx, t, width, height) {
         let padY = WALL_WIDTH + padH / 2 + Math.random() * 8;
         let rot = Math.random() * Math.PI * 0.2 - 0.4;
         let color = 'hsl(' + (90 + Math.random() * 30) + ', 60%, 38%)';
-    let skew = Math.random() * 0.2 - 0.1;
-    let veinBaseAngle = Math.random() * Math.PI * 2;
+        let skew = Math.random() * 0.2 - 0.1;
+        let veinBaseAngle = Math.random() * Math.PI * 2;
         // 20% chance for a bug, 10% for a flower, mutually exclusive
         let hasBug = Math.random() < 0.2;
         let hasFlower = !hasBug && Math.random() < 0.1;
         let bugType = hasBug ? (Math.random() < 0.5 ? 'ladybug' : 'bee') : null;
-    lilyPads.push({ x: padX, y: padY, w: padW, h: padH, rot, color, skew, veinBaseAngle, hasBug, hasFlower, bugType });
+        // Drop-in animation: start above, animate to padY
+        let appearTime = performance.now();
+        let startY = padY - 60 - Math.random() * 40;
+        lilyPads.push({ x: padX, y: padY, w: padW, h: padH, rot, color, skew, veinBaseAngle, hasBug, hasFlower, bugType, appearTime, startY, animating: true });
     }
 
     let surfaceH = 50;
@@ -771,12 +773,15 @@ function animate(ctx, t, width, height) {
         ctx.shadowBlur = 4;
         ctx.fill();
         ctx.restore();
-        // Pellet falls down
+        // Pellet floats up
         pellet.y += pellet.vy;
-        // Stop at bottom of tank
+        // Stop at 10px below surface (top of tank)
         const WALL_WIDTH = 10;
-        const bottom = height - WALL_WIDTH - pellet.r;
-        if (pellet.y > bottom) pellet.y = bottom;
+        const stopY = WALL_WIDTH + 10 + pellet.r;
+        if (pellet.y < stopY) {
+            pellet.y = stopY;
+            pellet.vy = 0;
+        }
     }
     // Caustics
     drawCaustics(ctx, width, height, t);
@@ -1004,7 +1009,21 @@ function animate(ctx, t, width, height) {
         ctx.save();
         // Animate floating left/right
         let floatX = pad.x + Math.sin(t * 0.22 + pad.x * 0.013) * 18;
-        ctx.translate(floatX, pad.y);
+        // Drop-in animation: animate y from startY to pad.y over 0.7s with ease-out bounce
+        let dropDuration = 700; // ms
+        let now = performance.now();
+        let dropT = 1;
+        if (pad.animating && pad.appearTime) {
+            dropT = Math.min(1, (now - pad.appearTime) / dropDuration);
+            // Ease-out bounce
+            let easeT = dropT < 1 ? (1 - Math.pow(1 - dropT, 2.5)) : 1;
+            let bounce = dropT < 1 ? Math.abs(Math.sin(Math.PI * easeT * 2.2) * (1 - easeT) * 8) : 0;
+            var drawY = pad.startY + (pad.y - pad.startY) * easeT + bounce;
+            if (dropT >= 1) pad.animating = false;
+        } else {
+            var drawY = pad.y;
+        }
+        ctx.translate(floatX, drawY);
         // Perspective skew: compress Y, skew X by a small amount
         ctx.transform(1, 0, pad.skew, 0.65, 0, 0); // [a, b, c, d, e, f]
         ctx.rotate(pad.rot + Math.sin(t * 0.1 + pad.x * 0.01) * 0.08);
