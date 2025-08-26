@@ -1,3 +1,28 @@
+// Start a new net event at a random position
+function startNetEvent(width, height) {
+    let pivotX = Math.random() * (width * 0.7) + width * 0.15;
+    let netRadius = 60 + Math.random() * 40;
+    let pivotY = -height * 0.5 - 60;
+    // Ensure pole (minus the net diameter) is long enough to reach the top of the canvas
+    // The pole must reach from pivotY to y=0, minus the net's diameter (2*netRadius)
+    let minPoleLen = Math.abs(pivotY) - 2 * netRadius;
+    minPoleLen = Math.max(minPoleLen, 0); // Clamp to non-negative
+    let poleLen = minPoleLen + Math.random() * (height * 0.5);
+    let netAngleStart = 0;
+    let netAngleEnd = 180;
+    let swingDir = Math.random() < 0.5 ? 1 : -1;
+    netEvent = {
+        pivotX,
+        pivotY,
+        poleLen,
+        netRadius,
+        t: 0,
+        swingDir,
+        netAngleStart,
+        netAngleEnd,
+        scooped: false
+    };
+}
 function onResize({ canvas, ctx, width, height }) {
     console.log('onResize')
     tankDecor = null;
@@ -136,25 +161,7 @@ function onClick(e, { canvas, ctx, width, height }) {
         if (e.ctrlKey) {
             // Ctrl-click: start a net event
             if (!netEvent) {
-                let pivotX = Math.random() * (width * 0.7) + width * 0.15;
-                let pivotY = -height * 0.5 - 60;
-                let poleLenBase = height * 0.8;
-                let poleLen = poleLenBase * (Math.random() * 1.5);
-                let netRadius = 60 + Math.random() * 40;
-                let netAngleStart = 0;
-                let netAngleEnd = 180;
-                let swingDir = Math.random() < 0.5 ? 1 : -1;
-                netEvent = {
-                    pivotX,
-                    pivotY,
-                    poleLen,
-                    netRadius,
-                    t: 0,
-                    swingDir,
-                    netAngleStart,
-                    netAngleEnd,
-                    scooped: false
-                };
+                startNetEvent(width, height);
             }
         } else if (e.shiftKey) {
             // Add a fish at this location (random species)
@@ -603,27 +610,7 @@ function animate(ctx, t, width, height) {
 
     // Rare random event: cartoon net on a pole swings in from the top
     if (!netEvent && Math.random() < NET_PROBABILITY) {
-        // Net pivots from a point off the top of the screen
-        let pivotX = Math.random() * (width * 0.7) + width * 0.15;
-        let pivotY = -height * 0.5 - 60;
-        // Always randomize pole length for each swing
-        let poleLenBase = height * 1.2;
-        let poleLen = poleLenBase * (Math.random() * 1.5);
-        let netRadius = 60 + Math.random() * 40;
-        let netAngleStart = 0;
-        let netAngleEnd = 180;
-        let swingDir = Math.random() < 0.5 ? 1 : -1;
-        netEvent = {
-            pivotX,
-            pivotY,
-            poleLen,
-            netRadius,
-            t: 0,
-            swingDir,
-            netAngleStart,
-            netAngleEnd,
-            scooped: false
-        };
+        startNetEvent(width, height);
     }
     if (netEvent) {
         // Animate net swinging down
@@ -959,11 +946,12 @@ function animate(ctx, t, width, height) {
             vx = (Math.abs(f.vx) + 0.1) * (f.flip ? -1 : 1);
             vy = 0.1 * Math.sin(t * 0.1 + f.x * 0.01);
         } else if (f.behavior === 'explore' && f.target) {
-            // Move toward target
+            // Move toward target with deadzone
             let dx = f.target.x - f.x;
             let dy = f.target.y - f.y;
             let dist = Math.sqrt(dx * dx + dy * dy);
-            if (dist > 2) {
+            let deadzone = 6; // pixels
+            if (dist > deadzone) {
                 vx = 0.7 * dx / dist;
                 vy = 0.4 * dy / dist;
                 f.flip = vx < 0;
@@ -971,12 +959,13 @@ function animate(ctx, t, width, height) {
                 vx = 0; vy = 0;
             }
         } else if (f.behavior === 'lookForFood' && f.target) {
-            // Move toward target pellet, slower, with more jitter
+            // Move toward target pellet, slower, with more jitter, and deadzone
             let dx = f.target.x - f.x;
             let dy = f.target.y - f.y;
             let dist = Math.sqrt(dx * dx + dy * dy);
             let eatRadius = (f.size * 0.7) + (f.target.pellet ? f.target.pellet.r : 6) + 8; // larger eat radius
-            if (dist > eatRadius) {
+            let deadzone = 6; // pixels
+            if (dist > Math.max(eatRadius, deadzone)) {
                 vx = 0.3 * dx / dist + 0.08 * (Math.random() - 0.5);
                 vy = 0.2 * dy / dist + 0.08 * (Math.random() - 0.5);
                 f.flip = vx < 0;
