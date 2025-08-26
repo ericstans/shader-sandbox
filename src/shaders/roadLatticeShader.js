@@ -27,7 +27,7 @@ export function computeTurn(car, intersection, turn, GRID_SIZE) {
   if (turn === 'left') {
     if (car.dir === 'h') {
       // horizontal to vertical, reverse direction
-      let newRoad = intersection.y;
+      let newRoad = intersection.x;
       let newDir = 'v';
       let newDirection = car.direction === 1 ? -1 : 1;
       let newLane = newDirection === -1 ? 1 : 0;
@@ -35,7 +35,7 @@ export function computeTurn(car, intersection, turn, GRID_SIZE) {
       return { dir: newDir, direction: newDirection, road: newRoad, lane: newLane, pos: newPos };
     } else {
       // vertical to horizontal, reverse direction
-      let newRoad = intersection.y; // FIX: use intersection.y for horizontal road
+      let newRoad = intersection.y; 
       let newDir = 'h';
       let newDirection = car.direction === 1 ? -1 : 1;
       let newLane = newDirection === -1 ? 0 : 1;
@@ -45,7 +45,7 @@ export function computeTurn(car, intersection, turn, GRID_SIZE) {
   } else if (turn === 'right') {
     if (car.dir === 'h') {
       // horizontal to vertical, keep direction
-      let newRoad = intersection.x; // FIX: use intersection.x for vertical road
+      let newRoad = intersection.x; 
       let newDir = 'v';
       let newDirection = car.direction;
       let newLane = car.direction === 1 ? 0 : 1;
@@ -53,7 +53,7 @@ export function computeTurn(car, intersection, turn, GRID_SIZE) {
       return { dir: newDir, direction: newDirection, road: newRoad, lane: newLane, pos: newPos };
     } else {
       // vertical to horizontal, keep direction
-      let newRoad = intersection.y; // FIX: use intersection.y for horizontal road
+      let newRoad = intersection.y; 
       let newDir = 'h';
       let newDirection = car.direction;
       let newLane = car.direction === 1 ? 1 : 0;

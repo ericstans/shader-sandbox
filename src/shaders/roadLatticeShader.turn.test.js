@@ -18,7 +18,7 @@ describe('computeTurn', () => {
     expect(result).toEqual({
       dir: 'v',
       direction: -1,
-      road: 4, // intersection.y
+      road: 5, // intersection.x
       lane: 1,
       pos: 4 / GRID_SIZE,
     });
@@ -44,7 +44,7 @@ describe('computeTurn', () => {
     expect(result).toEqual({
       dir: 'h',
       direction: -1,
-      road: 7, // intersection.x
+      road: 7, // intersection.y
       lane: 0,
       pos: 6 / GRID_SIZE,
     });
