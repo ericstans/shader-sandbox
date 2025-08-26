@@ -48,14 +48,49 @@
                 min-height: 100vh;
             }
         }
+        .shader-inner-container {
+            position: relative;
+            display: inline-block;
+            width: 100%;
+            max-width: 1000px;
+        }
+        #glyph-style-dropdown-container {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            z-index: 10;
+            background: rgba(30,30,30,0.92);
+            border-radius: 8px;
+            padding: 6px 12px;
+            box-shadow: 0 2px 8px #0003;
+        }
+        #glyph-style-dropdown-container label {
+            color: #fff;
+            font-size: 1em;
+        }
+        #glyph-style-select {
+            font-size: 1em;
+            padding: 2px 8px;
+        }
+        .shader-select-container {
+            width: 100%;
+            max-width: 1000px;
+            margin: auto;
+            text-align: center;
+            box-sizing: border-box;
+        }
+        #shader-select {
+            font-size: 1.1em;
+            padding: 4px 10px;
+        }
     </style>
     <body>
         <div id="shader-container">
-            <div style="position:relative;display:inline-block;width:100%;max-width:1000px;">
-                <canvas id="plasma-canvas" style="display:block;max-width:100vw;max-height:calc(100vh - 70px);width:100%;height:auto;border:1px solid #333;background:#111;"></canvas>
-                <div id="glyph-style-dropdown-container" style="position:absolute;top:16px;right:16px;z-index:10;background:rgba(30,30,30,0.92);border-radius:8px;padding:6px 12px;box-shadow:0 2px 8px #0003;">
-                    <label for="glyph-style-select" style="color:#fff;font-size:1em;">Glyph Style: </label>
-                    <select id="glyph-style-select" style="font-size:1em;padding:2px 8px;">
+            <div class="shader-inner-container">
+                <canvas id="plasma-canvas"></canvas>
+                <div id="glyph-style-dropdown-container">
+                    <label for="glyph-style-select">Glyph Style: </label>
+                    <select id="glyph-style-select">
                         <option value="original">Original</option>
                         <option value="arabic">Arabic</option>
                         <option value="arabic2">Arabic 2</option>
@@ -79,10 +114,10 @@
                     </select>
                 </div>
             </div>
-            <div style="width:100%;max-width:1000px;margin:auto;text-align:center;box-sizing:border-box;">
-                <select id="shader-select" style="font-size:1.1em;padding:4px 10px;">
-                </select>
+            <div class="shader-select-container">
+                <select id="shader-select"></select>
             </div>
+        
         </div>
     </body>
 </body>
