@@ -44,7 +44,7 @@ function animate(ctx, t, width, height) {
     // Generate city layout and cache it only if needed
     if (!cachedCity || cachedCity.width !== width || cachedCity.height !== height) {
         let nBuildings = 8 + Math.floor(Math.random() * 4);
-    let cityW = shellW * 0.82;
+        let cityW = shellW * 0.82;
         let buildings = [];
         for (let i = 0; i < nBuildings; i++) {
             if (i == 0 || i == nBuildings-1){
@@ -55,9 +55,20 @@ function animate(ctx, t, width, height) {
             // Default building height and width
             let maxH = shellH * 3 * 1.28;
             let bH, bW;
-            // If brick, restrict height to 50% of max
+            // Add type: 0=rect, 1=dome, 2=spire, 3=round tower, 4=brick
+            let typeRand = Math.random();
+            let type = 0;
+            if (typeRand < 0.25) type = 0; // normal rect
+            else if (typeRand < 0.5) type = 1; // dome
+            else if (typeRand < 0.7) type = 2; // tall spire
+            else if (typeRand < 0.85) type = 3; // round tower
+            else type = 4; // brick
             if (type === 4) {
                 bH = maxH * (0.28 + Math.random() * 0.5); // up to 50% of max
+                bW = shellW * (0.09 + Math.random() * 0.08);
+            } else if (type === 2) {
+                // Spire: restrict thin part to a smaller max height
+                bH = shellH * 3 * (0.18 + Math.random() * 0.45); // smaller max height for spire
                 bW = shellW * (0.09 + Math.random() * 0.08);
             } else {
                 bH = shellH * 3 * (0.28 + Math.random() * 1);
@@ -82,14 +93,6 @@ function animate(ctx, t, width, height) {
                 '#a89f91'  // stucco
             ];
             let color, domeColor;
-            // Add type: 0=rect, 1=dome, 2=spire, 3=round tower, 4=brick
-            let typeRand = Math.random();
-            let type = 0;
-            if (typeRand < 0.25) type = 0; // normal rect
-            else if (typeRand < 0.5) type = 1; // dome
-            else if (typeRand < 0.7) type = 2; // tall spire
-            else if (typeRand < 0.85) type = 3; // round tower
-            else type = 4; // brick
             if (type === 2 || type === 3) {
                 color = materialColors[Math.floor(Math.random() * materialColors.length)];
                 domeColor = color;
@@ -100,7 +103,26 @@ function animate(ctx, t, width, height) {
                 color = `hsl(${180 + Math.random() * 40}, 18%, ${60 + Math.random() * 20}%)`;
                 domeColor = `hsl(${180 + Math.random() * 40}, 28%, ${70 + Math.random() * 20}%)`;
             }
-            buildings.push({ bx, by, bW, bH, color, domeColor, type });
+            // Only some rectangle buildings get antennas
+            let hasAntenna = false;
+            if (type === 0 && Math.random() < 0.4) {
+                hasAntenna = true;
+            }
+            buildings.push({ bx, by, bW, bH, color, domeColor, type, hasAntenna });
+        }
+        // Ensure tallest building is not at the farthest left or right
+        if (buildings.length > 2) {
+            let tallestIdx = 0;
+            for (let i = 1; i < buildings.length; i++) {
+                if (buildings[i].bH > buildings[tallestIdx].bH) tallestIdx = i;
+            }
+            // If tallest is at first or last, swap with a random interior building
+            if (tallestIdx === 0 || tallestIdx === buildings.length - 1) {
+                let swapIdx = 1 + Math.floor(Math.random() * (buildings.length - 2));
+                let temp = buildings[swapIdx];
+                buildings[swapIdx] = buildings[tallestIdx];
+                buildings[tallestIdx] = temp;
+            }
         }
         cachedCity = { width, height, cityW, buildings };
     }
@@ -186,14 +208,16 @@ function animate(ctx, t, width, height) {
             ctx.shadowColor = '#fff8';
             ctx.shadowBlur = 6;
             ctx.fill();
-            // Spire
-            ctx.beginPath();
-            ctx.moveTo(b.bx, b.by - b.bW * 0.32);
-            ctx.lineTo(b.bx, b.by - b.bW * 0.32 - b.bH * 0.22);
-            ctx.lineWidth = 2.2;
-            ctx.strokeStyle = '#bcd';
-            ctx.globalAlpha = 0.7;
-            ctx.stroke();
+            // Antenna: only some rectangle buildings get one
+            if (b.type === 0 && b.hasAntenna) {
+                ctx.beginPath();
+                ctx.moveTo(b.bx, b.by - b.bW * 0.32);
+                ctx.lineTo(b.bx, b.by - b.bW * 0.32 - b.bH * 0.22);
+                ctx.lineWidth = 2.2;
+                ctx.strokeStyle = '#bcd';
+                ctx.globalAlpha = 0.7;
+                ctx.stroke();
+            }
             ctx.restore();
         }
 
