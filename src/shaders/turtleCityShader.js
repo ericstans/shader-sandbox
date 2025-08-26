@@ -7,6 +7,7 @@ const displayName = 'Turtle City (Berto)';
 let startTime = null;
 let cachedCity = null;
 let turtleSpecies = null;
+let turtleScale = 1;
 
 function animate(ctx, t, width, height) {
 
@@ -14,8 +15,8 @@ function animate(ctx, t, width, height) {
     let elapsed = (performance.now() - startTime) / 1000;
     ctx.clearRect(0, 0, width, height);
 
-    // Pick turtle species if not set or if canvas size changed
-    if (!turtleSpecies || !cachedCity || cachedCity.width !== width || cachedCity.height !== height) {
+    // Pick turtle species and size if not set (or if canvas size changed)
+    if (!turtleSpecies || cachedCity && (cachedCity.width !== width || cachedCity.height !== height)) {
         const speciesList = [
             { name: 'Original', key: 'original' },
             { name: 'Red-eared slider', key: 'slider' },
@@ -23,15 +24,18 @@ function animate(ctx, t, width, height) {
             { name: 'Painted turtle', key: 'painted' }
         ];
         turtleSpecies = speciesList[Math.floor(Math.random() * speciesList.length)];
+        // Turtle size variation: 0.85x to 1.15x
+        turtleScale = 0.85 + Math.random() * 0.3;
     }
 
     // Turtle body parameters (front view)
     const centerX = width / 2;
     const baseY = height * 0.7;
-    const shellW = width * 0.48;
-    const shellH = height * 0.1;
+    const shellW = width * 0.48 * turtleScale; // width varies
+    const shellH = height * 0.1; // height fixed
     const headR = shellW * 0.18;
-    const legW = shellW * 0.18;
+    // Leg width is based on unscaled shell width, so legs don't get wider with shell
+    const legW = width * 0.48 * 0.18;
     const legH = shellH * 0.7;
 
     // Species-based color palette
@@ -454,15 +458,25 @@ function onResize({ canvas, ctx, width, height }) {
     startTime = null;
     cachedCity = null;
     turtleSpecies = null;
+    turtleScale = 1;
 }
 
 // Add click-to-clear-cached-city handler (idempotent)
 if (typeof window !== 'undefined' && window.plasma_canvas_city_clear !== true) {
     const canvas = document.getElementById('plasma-canvas');
     if (canvas) {
-        canvas.addEventListener('click', () => {
-            cachedCity = null;
-            startTime = null;
+        canvas.addEventListener('click', (e) => {
+            if (e.ctrlKey) {
+                // Ctrl+click: regenerate turtle species, size, and city
+                turtleSpecies = null;
+                turtleScale = 1;
+                cachedCity = null;
+                startTime = null;
+            } else {
+                // Left click: only regenerate city
+                cachedCity = null;
+                // Do not reset startTime, so bobbing animation stays smooth
+            }
         });
         window.plasma_canvas_city_clear = true;
     }
