@@ -1,26 +1,16 @@
-
-function onResize({ canvas, ctx, width, height }) {
-    console.log('onResize')
-    tankDecor = null;
-}
-// Fish Tank Shader: animated fish, bubbles, and water caustics
-// Exports: { displayName, animate, onResize }
-
 const displayName = 'Fish Tank';
 // Day/Night cycle state
-let isNight = false;
-let lastDayNightSwitch = 0;
+
+const WALL_WIDTH = 10;
+const SURFACE_HEIGHT = 10;
 const DAY_LENGTH_MS = 18000; // 18 seconds day, 18 seconds night
 const TRANSITION_MS = 1000; // 1 second transition
-let transitioning = false;
-let transitionStart = 0;
-let transitionFromNight = false;
 const EGG_LAYING_PROBABILITY = 1 / 150;
 const NET_PROBABILITY = 1 / 5000;
 const NET_SPEED = 1 / 30000
 const MAX_LILY_PADS = 8;
 const LILY_PAD_SPAWN_CHANCE = 1 / 3000; // chance per frame
-const WALL_WIDTH = 10;
+
 let fish = [];
 let netEvent = null;
 let eggs = [];
@@ -28,6 +18,11 @@ let bubbles = [];
 let tankDecor = null;
 let foodPellets = [];
 let lilyPads = [];
+let isNight = false;
+let lastDayNightSwitch = 0;
+let transitioning = false;
+let transitionStart = 0;
+let transitionFromNight = false;
 
 // Start a new net event at a random position
 function startNetEvent(width, height) {
@@ -844,9 +839,8 @@ function animate(ctx, t, width, height) {
         ctx.restore();
         // Pellet floats up
         pellet.y += pellet.vy;
-        // Stop at 10px below surface (top of tank)
-        const WALL_WIDTH = 10;
-        const stopY = WALL_WIDTH + 10 + pellet.r;
+        // Stop at surface below top of tank
+        const stopY = SURFACE_HEIGHT + 10 + pellet.r;
         if (pellet.y < stopY) {
             pellet.y = stopY;
             pellet.vy = 0;
@@ -1230,6 +1224,12 @@ function animate(ctx, t, width, height) {
     ctx.fillRect(0, height - WALL_WIDTH, width, WALL_WIDTH); // bottom
     ctx.restore();
 }
+
+function onResize({ canvas, ctx, width, height }) {
+    console.log('onResize')
+    tankDecor = null;
+}
+
 
 export default {
     displayName,
