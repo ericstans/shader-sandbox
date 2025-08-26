@@ -107,7 +107,6 @@ export const shaders = [
 	{ shader: gridGlyphShader2, displayName: 'Grid Glyphs 2' },
 	{ shader: gridGlyphShader3, displayName: 'Grid Glyphs 3' },
 	{ shader: gridGlyphShader4, displayName: 'Grid Glyphs 4' },
-	
 	seedGrowthShader,
 	organicGrowthShader,
 	turtleCityShader,
@@ -117,6 +116,6 @@ export const shaders = [
 	{ shader: plasmaPongShader, displayName: 'Plasma Pong' },
 	{ shader: tetrisShader, displayName: 'Tetris' },
 	{ shader: puyoShader, displayName: 'Puyo Puyo' },
-	{ shader: rainstickShader, displayName: 'Rainstick' },
-    { shader: fishTankShader, displayName: 'Fish Tank' }
+    { shader: fishTankShader, displayName: 'Fish Tank' },
+	{ shader: rainstickShader, displayName: 'Rainstick' }
 ];

@@ -9,7 +9,7 @@ const displayName = 'Rainstick';
 
 const STICK_LENGTH = 500;
 const STICK_RADIUS = 30;
-const NUM_PINS = 80;
+const NUM_PINS = 60;
 const PIN_RADIUS = 2;
 let NUM_PEBBLES = 12;
 const GRAVITY = 0.3;
@@ -59,7 +59,7 @@ function reset() {
   state = {
     pins,
     pebbles,
-    angle: 0,
+    angle: Math.PI / 2, //start vertical
     BANDPASS_Q: 18,
     dragging: false,
     dragStart: null,
