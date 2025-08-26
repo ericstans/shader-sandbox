@@ -289,6 +289,11 @@ if (select) {
 		} else if (shaders[currentShader] && shaders[currentShader].onResize) {
 			shaders[currentShader].onResize({ canvas, ctx, width, height });
 		}
+
+		// Update the URL parameter for shader
+		const url = new URL(window.location.href);
+		url.searchParams.set('shader', select.value);
+		window.history.replaceState({}, '', url);
 	});
 }
 
