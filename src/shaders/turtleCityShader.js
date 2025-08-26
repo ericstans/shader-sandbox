@@ -332,10 +332,26 @@ function animate(ctx, t, width, height) {
     ctx.save();
     ctx.beginPath();
     ctx.ellipse(centerX, baseY, shellW / 2, shellH, 0, 0, Math.PI * 2);
-    ctx.fillStyle = shellColor;
+    // 3D shell shading: radial gradient for depth (no alpha)
+    let shellGrad = ctx.createRadialGradient(centerX, baseY - shellH * 0.3, shellW * 0.1, centerX, baseY, shellW * 0.5);
+    shellGrad.addColorStop(0, '#fffbe6');
+    shellGrad.addColorStop(0.25, shellColor);
+    shellGrad.addColorStop(1, '#222');
+    ctx.save();
+    ctx.globalAlpha = 1.0;
+    ctx.fillStyle = shellGrad;
     ctx.shadowColor = shellShadow;
     ctx.shadowBlur = shellShadowBlur;
     ctx.fill();
+    ctx.restore();
+    // Shell highlight (keep subtle alpha for highlight only)
+    ctx.save();
+    ctx.beginPath();
+    ctx.ellipse(centerX, baseY - shellH * 0.45, shellW * 0.22, shellH * 0.22, 0, 0, Math.PI * 2);
+    ctx.globalAlpha = 0.18;
+    ctx.fillStyle = '#fff';
+    ctx.fill();
+    ctx.restore();
     ctx.restore();
 
     // Shell pattern
@@ -384,11 +400,23 @@ function animate(ctx, t, width, height) {
         ctx.save();
         ctx.beginPath();
         ctx.ellipse(lx, ly, legW * 0.5, legH, angle, 0, Math.PI * 2);
-    ctx.fillStyle = legColor;
-    ctx.shadowColor = shellShadow;
+        ctx.fillStyle = legColor;
+        ctx.shadowColor = shellShadow;
         ctx.shadowBlur = 6;
         ctx.globalAlpha = 0.95;
         ctx.fill();
+        // Skin details: subtle scale pattern on legs
+        ctx.save();
+        ctx.globalAlpha = 0.13;
+        ctx.strokeStyle = '#fff8';
+        let nScales = 4;
+        for (let s = 0; s < nScales; s++) {
+            let angleOffset = (Math.PI / 8) * (s - 1.5);
+            ctx.beginPath();
+            ctx.ellipse(lx + Math.cos(angle + angleOffset) * legW * 0.18, ly + Math.sin(angle + angleOffset) * legH * 0.3, legW * 0.13, legH * 0.09, angle, 0, Math.PI * 2);
+            ctx.stroke();
+        }
+        ctx.restore();
         ctx.restore();
     }
 
