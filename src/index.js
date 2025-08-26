@@ -141,6 +141,81 @@ function createFullscreenButton() {
 	fullscreenBtn.style.transition = 'opacity 0.2s';
 	fullscreenBtn.style.opacity = '0.92';
 	fullscreenBtn.title = 'Full screen';
+		fullscreenBtn.addEventListener('click', () => {
+			const container = document.getElementById('shader-container') || canvas.parentElement;
+			if (!document.fullscreenElement) {
+				if (container.requestFullscreen) {
+					container.requestFullscreen();
+				} else if (container.webkitRequestFullscreen) {
+					container.webkitRequestFullscreen();
+				} else if (container.mozRequestFullScreen) {
+					container.mozRequestFullScreen();
+				} else if (container.msRequestFullscreen) {
+					container.msRequestFullscreen();
+				}
+			} else {
+				if (document.exitFullscreen) {
+					document.exitFullscreen();
+				} else if (document.webkitExitFullscreen) {
+					document.webkitExitFullscreen();
+				} else if (document.mozCancelFullScreen) {
+					document.mozCancelFullScreen();
+				} else if (document.msExitFullscreen) {
+					document.msExitFullscreen();
+				}
+			}
+		});
+
+		// Fullscreen UI logic
+			// Store original canvas size
+				let origCanvasWidth = canvas.width;
+				let origCanvasHeight = canvas.height;
+				let origMaxWidth = canvas.style.maxWidth;
+				let origMaxHeight = canvas.style.maxHeight;
+			function setFullscreenUI(isFullscreen) {
+				const select = document.getElementById('shader-select');
+				if (select) {
+					select.style.display = isFullscreen ? 'none' : '';
+				}
+					if (isFullscreen) {
+						canvas.style.position = 'fixed';
+						canvas.style.left = '0';
+						canvas.style.top = '0';
+						canvas.style.width = '100vw';
+						canvas.style.height = '100vh';
+						canvas.style.zIndex = 10000;
+						canvas.style.maxWidth = 'none';
+						canvas.style.maxHeight = 'none';
+						// Set canvas pixel size to match screen
+						canvas.width = window.innerWidth;
+						canvas.height = window.innerHeight;
+					} else {
+						canvas.style.position = '';
+						canvas.style.left = '';
+						canvas.style.top = '';
+						canvas.style.width = '';
+						canvas.style.height = '';
+						canvas.style.zIndex = '';
+						canvas.style.maxWidth = origMaxWidth;
+						canvas.style.maxHeight = origMaxHeight;
+						// Restore canvas pixel size
+						canvas.width = origCanvasWidth;
+						canvas.height = origCanvasHeight;
+					}
+				if (typeof resizeCanvas === 'function') resizeCanvas();
+			}
+			// Also resize canvas if window size changes in fullscreen
+			window.addEventListener('resize', () => {
+				if (document.fullscreenElement === (document.getElementById('shader-container') || canvas.parentElement)) {
+					canvas.width = window.innerWidth;
+					canvas.height = window.innerHeight;
+					if (typeof resizeCanvas === 'function') resizeCanvas();
+				}
+			});
+
+		document.addEventListener('fullscreenchange', () => {
+			setFullscreenUI(!!document.fullscreenElement);
+		});
 	document.body.appendChild(fullscreenBtn);
 }
 
@@ -281,21 +356,31 @@ window.addEventListener('mouseup', (e) => {
 
 
 function resizeCanvas() {
-	// Calculate available space (subtract dropdown height, e.g. 70px)
-	const maxSize = 1000;
-	const container = document.getElementById('shader-container');
-	const availableWidth = Math.min(window.innerWidth, maxSize);
-	const availableHeight = Math.min(window.innerHeight - 70, maxSize);
-	const size = Math.min(availableWidth, availableHeight);
-	canvas.width = size;
-	canvas.height = size;
-	width = size;
-	height = size;
+	// If in fullscreen, use full window size
+	const isFullscreen = document.fullscreenElement === (document.getElementById('shader-container') || canvas.parentElement);
+	let size;
+	if (isFullscreen) {
+		canvas.width = window.innerWidth;
+		canvas.height = window.innerHeight;
+		width = window.innerWidth;
+		height = window.innerHeight;
+		canvas.style.width = width + 'px';
+		canvas.style.height = height + 'px';
+	} else {
+		// Calculate available space (subtract dropdown height, e.g. 70px)
+		const maxSize = 1000;
+		const availableWidth = Math.min(window.innerWidth, maxSize);
+		const availableHeight = Math.min(window.innerHeight - 70, maxSize);
+		size = Math.min(availableWidth, availableHeight);
+		canvas.width = size;
+		canvas.height = size;
+		width = size;
+		height = size;
+		canvas.style.width = size + 'px';
+		canvas.style.height = size + 'px';
+	}
 	imageData = ctx.getImageData(0, 0, width, height);
 	data = imageData.data;
-	// Set canvas style for crisp rendering
-	canvas.style.width = size + 'px';
-	canvas.style.height = size + 'px';
 }
 
 window.addEventListener('resize', resizeCanvas);
