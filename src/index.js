@@ -213,9 +213,20 @@ function createFullscreenButton() {
 				}
 			});
 
-		document.addEventListener('fullscreenchange', () => {
-			setFullscreenUI(!!document.fullscreenElement);
-		});
+			document.addEventListener('fullscreenchange', () => {
+				setFullscreenUI(!!document.fullscreenElement);
+				// If entering fullscreen and Fish Tank is active, regenerate scenery
+				if (document.fullscreenElement) {
+					// Find the current shader's displayName
+					let shaderObj = shaders[currentShader];
+					let shader = shaderObj && (shaderObj.shader || shaderObj);
+					if (shader && (shader.displayName === 'Fish Tank' || shaderObj.displayName === 'Fish Tank')) {
+						if (typeof shader.onResize === 'function') {
+							shader.onResize({ canvas, ctx, width: canvas.width, height: canvas.height });
+						}
+					}
+				}
+			});
 	document.body.appendChild(fullscreenBtn);
 }
 

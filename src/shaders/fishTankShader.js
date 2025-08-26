@@ -6,7 +6,7 @@ const EGG_LAYING_PROBABILITY = 1 / 150;
 const NET_PROBABILITY = 1 / 25000;
 const NET_SPEED = 1 / 30000
 const MAX_LILY_PADS = 8;
-const LILY_PAD_SPAWN_CHANCE = 1 / 3000; // chance per frame
+const LILY_PAD_SPAWN_CHANCE = 1/50 //1 / 3000; // chance per frame
 const WALL_WIDTH = 10;
 let fish = [];
 let netEvent = null;
@@ -31,6 +31,7 @@ function generateTankDecor(width, height, WALL_WIDTH) {
     for (let i = 0; i < bandCount; i++) {
         let gx = WALL_WIDTH + 3 + i * 7 + Math.random() * 2;
         let gy = gravelBandY + Math.random() * bandHeight;
+        gy = Math.min(gy, height - WALL_WIDTH - 2); // Clamp to bottom
         let gr = (3.5 + Math.random() * 2.5) * 2;
         gravelBand.push({
             x: gx,
@@ -44,9 +45,11 @@ function generateTankDecor(width, height, WALL_WIDTH) {
     // Individual gravel
     let gravel = [];
     for (let i = 0; i < 60; i++) {
+        let gy = height - WALL_WIDTH - 8 - Math.random() * 8 * 2;
+        gy = Math.min(gy, height - WALL_WIDTH - 2); // Clamp to bottom
         gravel.push({
             x: 20 + Math.random() * (width - 40),
-            y: height - WALL_WIDTH - 8 - Math.random() * 8 * 2,
+            y: gy,
             r: (2.2 + Math.random() * 1.8) * 2,
             color: `hsl(${35 + Math.random() * 30},${40 + Math.random() * 30}%,${60 + Math.random() * 20}%)`,
             alpha: 0.45 + Math.random() * 0.25
@@ -54,9 +57,11 @@ function generateTankDecor(width, height, WALL_WIDTH) {
     }
     let rocks = [];
     for (let i = 0; i < 5; i++) {
+        let ry = height - WALL_WIDTH - 12 - Math.random() * 10 * 2;
+        ry = Math.min(ry, height - WALL_WIDTH - 2); // Clamp to bottom
         rocks.push({
             x: 30 + Math.random() * (width - 60),
-            y: height - WALL_WIDTH - 12 - Math.random() * 10 * 2,
+            y: ry,
             rx: (12 + Math.random() * 10) * 2,
             ry: (7 + Math.random() * 6) * 2,
             rot: Math.random() * Math.PI,
@@ -66,9 +71,11 @@ function generateTankDecor(width, height, WALL_WIDTH) {
     }
     let plants = [];
     for (let i = 0; i < (5 + Math.random() * 10); i++) {
+        let baseY = height - WALL_WIDTH - 10;
+        baseY = Math.min(baseY, height - WALL_WIDTH - 2); // Clamp to bottom
         plants.push({
             x: 25 + Math.random() * (width - 50),
-            baseY: height - WALL_WIDTH - 10,
+            baseY: baseY,
             h: (28 + Math.random() * 200) * 2,
             color: `hsl(${90 + Math.random() * 60},${40 + Math.random() * 40}%,${30 + Math.random() * 30}%)`,
             lw: (2 + Math.random() * 3) * 2
@@ -1129,14 +1136,8 @@ function animate(ctx, t, width, height) {
     ctx.restore();
 }
 
-function onResize({ canvas, ctx, width, height }) {
-    resetFish(width, height);
-    resetBubbles(width, height);
-}
-
 export default {
     displayName,
     animate,
-    onResize,
     onClick
 };
