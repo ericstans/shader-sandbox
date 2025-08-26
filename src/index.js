@@ -6,6 +6,7 @@ import { shaders } from './shaders.js';
 // Glyph Generation Style dropdown
 const glyphStyleSelect = document.getElementById('glyph-style-select');
 const glyphStyleDropdownContainer = document.getElementById('glyph-style-dropdown-container');
+const shaderSelectContainer = document.getElementById('shader-select-container');
 window.currentGlyphStyle = 'original';
 function updateGlyphStyleDropdownVisibility() {
 	// Find the index of Grid Glyphs 4 in the shaders array
@@ -45,6 +46,17 @@ window.resetGlyphs = gridGlyphShader4.resetState;
 // Ensure the picklist is hidden by default
 if (glyphStyleDropdownContainer) {
 	glyphStyleDropdownContainer.style.display = 'none';
+}
+
+// Hide the picklist if 'noselect' URL parameter is present
+let noSelectParam = new URLSearchParams(window.location.search).get('noselect')
+console.log('noSelectParam', noSelectParam)
+if (noSelectParam){
+	console.log('param found')
+	if (shaderSelectContainer) {
+		shaderSelectContainer.style.display = 'none';
+		console.log('Shader dropdown hidden');
+	}
 }
 
 // After populating the shader dropdown and setting selectedIndex, update picklist visibility
@@ -430,10 +442,13 @@ if (select) {
 			shaders[currentShader].onResize({ canvas, ctx, width, height });
 		}
 
-		// Update the URL parameter for shader
-		const url = new URL(window.location.href);
-		url.searchParams.set('shader', select.value);
-		window.history.replaceState({}, '', url);
+	// Update the URL parameter for shader using the displayName (normalized)
+	const url = new URL(window.location.href);
+	let shaderObj = shaders[currentShader];
+	let name = shaderObj.displayName || (shaderObj.shader && shaderObj.shader.displayName) || '';
+	let normalized = name.toLowerCase().replace(/\s+/g, '');
+	url.searchParams.set('shader', normalized);
+	window.history.replaceState({}, '', url);
 	});
 }
 

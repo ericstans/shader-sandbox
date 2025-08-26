@@ -566,7 +566,6 @@ function animate(ctx, t, width, height) {
             transitioning = false;
         }
     }
-    // Water surface effect (top 50px)
     ctx.save();
     // draw background first
     // Water background (inside tank)
