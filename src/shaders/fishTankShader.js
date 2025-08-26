@@ -878,6 +878,7 @@ function animate(ctx, t, width, height) {
 
         // Sturgeon predation: eat other fish they encounter
         if (f.species && f.species.name === 'Sturgeon' && f.behavior === 'lookForFood') {
+            let ateFish = false;
             for (let j = 0; j < fish.length; j++) {
                 if (i === j) continue;
                 let prey = fish[j];
@@ -891,7 +892,13 @@ function animate(ctx, t, width, height) {
                 let eatRadius = Math.max(f.size * 0.7, 32);
                 if (dist < eatRadius && f.size > prey.size * 0.7) {
                     fishToRemove.add(j);
+                    ateFish = true;
                 }
+            }
+            if (ateFish) {
+                f.behavior = 'float';
+                f.behaviorTimer = 60 + Math.random() * 120;
+                f.target = null;
             }
         }
         // Behavior timer
@@ -899,9 +906,17 @@ function animate(ctx, t, width, height) {
         if (f.behaviorTimer <= 0) {
             // Rare chance: lay eggs (unless 50 or more fish)
             if (fish.length < 1000 && Math.random() < EGG_LAYING_PROBABILITY) {
-                // If Eyeball Fish, lay way more eggs
+                // If Eyeball Fish, lay way more eggs; if Sturgeon, lay fewer eggs
                 let isEyeball = f.species && f.species.name === 'Eyeball Fish';
-                let numEggs = isEyeball ? (18 + Math.floor(Math.random() * 10)) : (2 + Math.floor(Math.random() * 4));
+                let isSturgeon = f.species && f.species.name === 'Sturgeon';
+                let numEggs;
+                if (isEyeball) {
+                    numEggs = 18 + Math.floor(Math.random() * 10);
+                } else if (isSturgeon) {
+                    numEggs = 1 + Math.floor(Math.random() * 2); // Sturgeons lay only 1 or 2 eggs
+                } else {
+                    numEggs = 2 + Math.floor(Math.random() * 4);
+                }
                 for (let i = 0; i < numEggs; i++) {
                     let angle = Math.random() * Math.PI * 2;
                     let dist = 10 + Math.random() * 18;
