@@ -123,6 +123,101 @@ let width = canvas.width;
 let height = canvas.height;
 let imageData, data;
 
+// --- Fullscreen Button Overlay ---
+let fullscreenBtn = null;
+let fullscreenBtnVisible = false;
+function createFullscreenButton() {
+	if (fullscreenBtn) return;
+	fullscreenBtn = document.createElement('div');
+	fullscreenBtn.innerHTML = '<svg width="38" height="38" viewBox="0 0 38 38"><rect x="8" y="8" width="22" height="22" rx="4" fill="#222" opacity="0.85"/><path d="M13 17v-4h4" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M25 21v4h-4" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M25 13h-4v-4" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M13 25h4v4" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+	fullscreenBtn.style.position = 'fixed';
+	fullscreenBtn.style.width = '38px';
+	fullscreenBtn.style.height = '38px';
+	fullscreenBtn.style.bottom = '24px';
+	fullscreenBtn.style.right = '24px';
+	fullscreenBtn.style.zIndex = 10010;
+	fullscreenBtn.style.cursor = 'pointer';
+	fullscreenBtn.style.display = 'none';
+	fullscreenBtn.style.transition = 'opacity 0.2s';
+	fullscreenBtn.style.opacity = '0.92';
+	fullscreenBtn.title = 'Full screen';
+	document.body.appendChild(fullscreenBtn);
+}
+
+function updateFullscreenButtonPosition() {
+	if (!fullscreenBtn || !canvas) return;
+	const rect = canvas.getBoundingClientRect();
+	fullscreenBtn.style.left = (rect.right - 38 - 12) + 'px';
+	fullscreenBtn.style.top = (rect.bottom - 38 - 12) + 'px';
+}
+
+function showFullscreenButton() {
+	if (fullscreenBtn) {
+		fullscreenBtn.style.display = 'block';
+		fullscreenBtnVisible = true;
+		updateFullscreenButtonPosition();
+	}
+}
+function hideFullscreenButton() {
+	if (fullscreenBtn) {
+		fullscreenBtn.style.display = 'none';
+		fullscreenBtnVisible = false;
+	}
+}
+
+
+// Only show fullscreen button when mouse is in bottom right corner of canvas
+function isInFullscreenCorner(e) {
+	const rect = canvas.getBoundingClientRect();
+	const x = e.clientX;
+	const y = e.clientY;
+	// 60x60px area in bottom right
+	return (
+		x >= rect.right - 60 && x <= rect.right &&
+		y >= rect.bottom - 60 && y <= rect.bottom
+	);
+}
+
+let fullscreenCornerActive = false;
+function shouldShowFullscreenButton(e) {
+	if (isInFullscreenCorner(e)) return true;
+	if (fullscreenBtn) {
+		const btnRect = fullscreenBtn.getBoundingClientRect();
+		if (
+			e.clientX >= btnRect.left && e.clientX <= btnRect.right &&
+			e.clientY >= btnRect.top && e.clientY <= btnRect.bottom
+		) {
+			return true;
+		}
+	}
+	return false;
+}
+
+function handleMouseMove(e) {
+	createFullscreenButton();
+	if (shouldShowFullscreenButton(e)) {
+		if (!fullscreenCornerActive) {
+			showFullscreenButton();
+			fullscreenCornerActive = true;
+		}
+		updateFullscreenButtonPosition();
+	} else {
+		if (fullscreenCornerActive) {
+			hideFullscreenButton();
+			fullscreenCornerActive = false;
+		}
+	}
+}
+
+canvas.addEventListener('mousemove', handleMouseMove);
+document.addEventListener('mousemove', handleMouseMove);
+canvas.addEventListener('mouseleave', () => {
+	hideFullscreenButton();
+	fullscreenCornerActive = false;
+});
+window.addEventListener('resize', updateFullscreenButtonPosition);
+window.addEventListener('scroll', updateFullscreenButtonPosition, true);
+
 // --- Zoom and Pan State ---
 let viewZoom = 1;
 let viewOffsetX = 0;
