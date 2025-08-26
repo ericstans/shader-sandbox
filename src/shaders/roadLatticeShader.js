@@ -54,6 +54,8 @@ function makeCar(road, lane, dir, pos) {
     waitTimer: 0,
     color,
     accelerating: false,
+    turnSignal: null, // 'left', 'right', or null
+    turnSignalTimer: 0,
   };
 }
 
@@ -245,6 +247,24 @@ function drawCars(ctx, w, h, dt) {
     ctx.rotate(angle);
     ctx.fillStyle = car.color;
     ctx.fillRect(-CAR_LENGTH / 2, -CAR_WIDTH / 2, CAR_LENGTH, CAR_WIDTH);
+    // Draw turn signal if active (blink every 0.2s)
+    if (car.turnSignal) {
+    let blink = Math.floor((state.t * 5) % 2) === 0;
+    if (blink) {
+        ctx.fillStyle = '#ff0';
+        let x = 0, y = 0;
+        if (car.turnSignal === 'left') {
+        x = -CAR_LENGTH / 2 + 2;
+        y = -CAR_WIDTH / 2 - 2;
+        } else if (car.turnSignal === 'right') {
+        x = -CAR_LENGTH / 2 + 2;
+        y = CAR_WIDTH / 2 + 2;
+        }
+        ctx.beginPath();
+        ctx.arc(x, y, 3, 0, Math.PI * 2);
+        ctx.fill();
+    }
+    }
     ctx.restore();
   }
 }
@@ -416,6 +436,8 @@ function updateCars(dt, w, h) {
             let intersectionIdx = Math.round(c * (GRID_SIZE - 1));
             // Only allow turns if the new road index is within 1 and GRID_SIZE-2
             if (turn < 0.25) { // Left turn
+                car.turnSignal = 'left';
+                car.turnSignalTimer = 0.5;
               if (car.dir === 'h') {
                 let newRoad = intersectionIdx;
                 if (newRoad > 0 && newRoad < GRID_SIZE - 1) {
@@ -440,6 +462,8 @@ function updateCars(dt, w, h) {
                 }
               }
             } else if (turn < 0.5) { // Right turn
+                car.turnSignal = 'right';
+                car.turnSignalTimer = 0.5;
               if (car.dir === 'h') {
                 let newRoad = intersectionIdx;
                 if (newRoad > 0 && newRoad < GRID_SIZE - 1) {
@@ -451,6 +475,7 @@ function updateCars(dt, w, h) {
                   break;
                 }
               } else {
+                car.turnSignal = null;
                 let newRoad = intersectionIdx;
                 if (newRoad > 0 && newRoad < GRID_SIZE - 1) {
                   car.dir = 'h';
@@ -465,6 +490,10 @@ function updateCars(dt, w, h) {
             // Go straight: do nothing special, just mark as turned
             car._hasTurned = true;
             break;
+          }
+          if (car.turnSignalTimer > 0) {
+            car.turnSignalTimer -= dt;
+            if (car.turnSignalTimer <= 0) car.turnSignal = null;
           }
         }
       }
