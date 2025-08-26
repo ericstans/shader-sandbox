@@ -1,54 +1,3 @@
-// --- AudioContext unlock veil ---
-let audioVeil = null;
-function showAudioVeil() {
-  if (audioVeil) return;
-  audioVeil = document.createElement('div');
-  audioVeil.style.position = 'fixed';
-  audioVeil.style.left = '0';
-  audioVeil.style.top = '0';
-  audioVeil.style.width = '100vw';
-  audioVeil.style.height = '100vh';
-  audioVeil.style.background = 'rgba(0,0,0,0.85)';
-  audioVeil.style.color = 'white';
-  audioVeil.style.display = 'flex';
-  audioVeil.style.alignItems = 'center';
-  audioVeil.style.justifyContent = 'center';
-  audioVeil.style.fontSize = '2.5em';
-  audioVeil.style.zIndex = '99999';
-  audioVeil.style.userSelect = 'none';
-  audioVeil.innerText = 'Tap for Audio';
-  audioVeil.addEventListener('pointerdown', unlockAudioContext);
-  document.body.appendChild(audioVeil);
-}
-
-function removeAudioVeil() {
-  if (audioVeil && audioVeil.parentNode) {
-    audioVeil.parentNode.removeChild(audioVeil);
-    audioVeil = null;
-  }
-}
-
-function unlockAudioContext() {
-  if (!window._rainstickAudioCtx) {
-    window._rainstickAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  }
-  const ctx = window._rainstickAudioCtx;
-  if (ctx.state === 'suspended') {
-    ctx.resume();
-  }
-  removeAudioVeil();
-}
-// Show the veil if audio context is not running
-if (typeof window !== 'undefined') {
-  document.addEventListener('DOMContentLoaded', () => {
-    setTimeout(() => {
-      let ctx = window._rainstickAudioCtx;
-      if (!ctx || ctx.state === 'suspended') {
-        showAudioVeil();
-      }
-    }, 100);
-  });
-}
 // Minimum speed required to make sound
 let BANDPASS_Q = 18;
 
@@ -69,6 +18,7 @@ const REST_THRESHOLD = 0.08;
 
 
 let state = null;
+let audioVeil = null;
 let deviceAlpha = null; // For device orientation (alpha)
 let uiElements = null;
 let BLINK_ENABLED = false;
@@ -120,15 +70,58 @@ function reset() {
   };
 }
 
+function ensureAudioContextStarted() {
+  if (!window._rainstickAudioCtx) return;
+  if (window._rainstickAudioCtx.state === 'suspended') {
+    window._rainstickAudioCtx.resume();
+  }
+  if (audioVeil && window._rainstickAudioCtx.state === 'running') {
+    if (audioVeil.parentNode) audioVeil.parentNode.removeChild(audioVeil);
+    audioVeil = null;
+  }
+}
+
+function showAudioVeil(canvas) {
+  if (audioVeil) return;
+  audioVeil = document.createElement('div');
+  audioVeil.textContent = 'Tap for Audio';
+  audioVeil.style.position = 'fixed';
+  audioVeil.style.left = 0;
+  audioVeil.style.top = 0;
+  audioVeil.style.width = '100vw';
+  audioVeil.style.height = '100vh';
+  audioVeil.style.background = 'rgba(0,0,0,0.7)';
+  audioVeil.style.color = 'white';
+  audioVeil.style.display = 'flex';
+  audioVeil.style.alignItems = 'center';
+  audioVeil.style.justifyContent = 'center';
+  audioVeil.style.fontSize = '2.5em';
+  audioVeil.style.zIndex = 99999;
+  audioVeil.style.userSelect = 'none';
+  audioVeil.style.cursor = 'pointer';
+  audioVeil.addEventListener('touchstart', startAudioFromVeil, { once: true });
+  audioVeil.addEventListener('mousedown', startAudioFromVeil, { once: true });
+  document.body.appendChild(audioVeil);
+}
+
+function startAudioFromVeil(e) {
+  if (!window._rainstickAudioCtx) {
+    window._rainstickAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+  window._rainstickAudioCtx.resume();
+  if (audioVeil && window._rainstickAudioCtx.state === 'running') {
+    if (audioVeil.parentNode) audioVeil.parentNode.removeChild(audioVeil);
+    audioVeil = null;
+  }
+}
+
 function playSound(volume, speed = 1) {
   // Bandpassed noise burst using Web Audio API, frequency depends on impact speed (legacy)
   if (!window._rainstickAudioCtx) {
     window._rainstickAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
   }
   const ctx = window._rainstickAudioCtx;
-  if (audioVeil && ctx.state === 'running') {
-    removeAudioVeil();
-  }
+  ensureAudioContextStarted();
   // Only play sound if speed is above threshold
   if (speed < MIN_SOUND_SPEED) return;
   // Count currently playing sounds
@@ -251,6 +244,15 @@ if (typeof window !== 'undefined' && !window._rainstickGyroListener) {
 }
 
 function animate(ctx, t, width, height) {
+  // Show audio veil if needed
+  if (typeof window !== 'undefined' && ctx && ctx.canvas) {
+    if (!window._rainstickAudioCtx || window._rainstickAudioCtx.state !== 'running') {
+      showAudioVeil(ctx.canvas);
+    } else if (audioVeil) {
+      if (audioVeil.parentNode) audioVeil.parentNode.removeChild(audioVeil);
+      audioVeil = null;
+    }
+  }
   // --- Gravity direction indicator arrow ---
   // Show real-world gravity direction (down), not affected by stick rotation
   let gravityAngle;
