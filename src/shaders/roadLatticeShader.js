@@ -7,7 +7,7 @@ const INTERSECTION_SIZE = 48;
 const ROAD_WIDTH = 50;
 const LANE_WIDTH = ROAD_WIDTH / 2;
 const GRID_SIZE = 5; // 5x5 grid
-const NUM_CARS = 300;
+const NUM_CARS = 10;
 const CAR_LENGTH = 24;
 const CAR_WIDTH = 12;
 const CAR_COLOR = '#2e8b57';
@@ -42,6 +42,8 @@ function makeIntersection(x, y) {
 function makeCar(road, lane, dir, pos) {
   // dir: 'h' or 'v', direction: 1 (right/down) or -1 (left/up) -- direction must be passed in
   const maxSpeed = 10 + Math.random() * 25;
+  // Generate a random color for the car
+  const color = `hsl(${Math.floor(Math.random() * 360)}, 70%, 45%)`;
   return {
     road, lane, dir, pos,
     // direction will be set by caller
@@ -50,7 +52,7 @@ function makeCar(road, lane, dir, pos) {
     targetSpeed: maxSpeed,
     stopped: false,
     waitTimer: 0,
-    color: CAR_COLOR,
+    color,
     accelerating: false,
   };
 }
