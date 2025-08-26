@@ -7,6 +7,14 @@ function onResize({ canvas, ctx, width, height }) {
 // Exports: { displayName, animate, onResize }
 
 const displayName = 'Fish Tank';
+// Day/Night cycle state
+let isNight = false;
+let lastDayNightSwitch = 0;
+const DAY_LENGTH_MS = 18000; // 18 seconds day, 18 seconds night
+const TRANSITION_MS = 1000; // 1 second transition
+let transitioning = false;
+let transitionStart = 0;
+let transitionFromNight = false;
 const EGG_LAYING_PROBABILITY = 1 / 150;
 const NET_PROBABILITY = 1 / 5000;
 const NET_SPEED = 1 / 30000
@@ -323,8 +331,8 @@ function resetFish(width, height) {
         let dir = Math.random() < 0.5 ? 1 : -1;
         let vx = (Math.random() * 0.5 + 0.3) * dir;
         let flip = Math.random() < 0.5;
-        let behaviors = ['float', 'swim', 'explore', 'lookForFood'];
-        let behavior = behaviors[Math.floor(Math.random() * behaviors.length)];
+        let behaviors = ['float', 'swim', 'explore', 'lookForFood', 'sleep'];
+        let behavior = behaviors[Math.floor(Math.random() * (behaviors.length - 1))]; // don't start as sleep
         let species = speciesList[Math.floor(Math.random() * speciesList.length)];
         fish.push({
             x: Math.random() * width,
@@ -337,7 +345,8 @@ function resetFish(width, height) {
             behavior: behavior,
             behaviorTimer: 60 + Math.random() * 120, // frames until next behavior
             target: null, // for explore/food
-            species: species
+            species: species,
+            sleeper: Math.random() < 0.6 // 60% of fish are sleepers
         });
     }
 }
@@ -527,15 +536,76 @@ function drawCaustics(ctx, width, height, t) {
     ctx.restore();
 }
 
-const newLocal = 1 / 50;
 function animate(ctx, t, width, height) {
+    // At night, put all fish to sleep; during day, wake them up
+    if (typeof isNight !== 'undefined') {
+        for (let f of fish) {
+            if (f.sleeper) {
+                if (isNight && f.behavior !== 'sleep') {
+                    f.behavior = 'sleep';
+                    f.behaviorTimer = 999999; // stay asleep all night
+                } else if (!isNight && f.behavior === 'sleep') {
+                    // Wake up: pick a random behavior
+                    let behaviors = ['float', 'swim', 'explore', 'lookForFood'];
+                    let next = behaviors[Math.floor(Math.random() * behaviors.length)];
+                    f.behavior = next;
+                    f.behaviorTimer = 60 + Math.random() * 1200;
+                }
+            }
+        }
+    }
+    // Day/Night cycle logic
+    let now = performance.now();
+    // Handle day/night switching and transition
+    let transitionT = 0;
+    if (!transitioning && now - lastDayNightSwitch > DAY_LENGTH_MS) {
+        transitioning = true;
+        transitionStart = now;
+        transitionFromNight = isNight;
+        lastDayNightSwitch = now;
+    }
+    if (transitioning) {
+        transitionT = Math.min(1, (now - transitionStart) / TRANSITION_MS);
+        if (transitionT >= 1) {
+            isNight = !isNight;
+            transitioning = false;
+        }
+    }
     // Water surface effect (top 50px)
     ctx.save();
     // draw background first
     // Water background (inside tank)
+    // Day and night gradient colors
+    const dayTop = '#5ec6e6', dayBottom = '#0a2a3a';
+    const nightTop = '#438da3ff', nightBottom = '#0a2a3a';
     let grad = ctx.createLinearGradient(0, 0, 0, height - WALL_WIDTH);
-    grad.addColorStop(0, '#5ec6e6');
-    grad.addColorStop(1, '#0a2a3a');
+    if (transitioning) {
+        // Crossfade between gradients
+        let fromTop = transitionFromNight ? nightTop : dayTop;
+        let fromBottom = transitionFromNight ? nightBottom : dayBottom;
+        let toTop = transitionFromNight ? dayTop : nightTop;
+        let toBottom = transitionFromNight ? dayBottom : nightBottom;
+        // Interpolate colors
+        function lerpColor(a, b, t) {
+            // a, b: hex strings '#rrggbb'
+            let ah = a.startsWith('#') ? a.slice(1) : a;
+            let bh = b.startsWith('#') ? b.slice(1) : b;
+            let ar = parseInt(ah.slice(0,2),16), ag = parseInt(ah.slice(2,4),16), ab = parseInt(ah.slice(4,6),16);
+            let br = parseInt(bh.slice(0,2),16), bg = parseInt(bh.slice(2,4),16), bb = parseInt(bh.slice(4,6),16);
+            let rr = Math.round(ar + (br-ar)*t);
+            let rg = Math.round(ag + (bg-ag)*t);
+            let rb = Math.round(ab + (bb-ab)*t);
+            return `#${rr.toString(16).padStart(2,'0')}${rg.toString(16).padStart(2,'0')}${rb.toString(16).padStart(2,'0')}`;
+        }
+        grad.addColorStop(0, lerpColor(fromTop, toTop, transitionT));
+        grad.addColorStop(1, lerpColor(fromBottom, toBottom, transitionT));
+    } else if (isNight) {
+        grad.addColorStop(0, nightTop);
+        grad.addColorStop(1, nightBottom);
+    } else {
+        grad.addColorStop(0, dayTop);
+        grad.addColorStop(1, dayBottom);
+    }
     ctx.fillStyle = grad;
     ctx.fillRect(WALL_WIDTH, 0, width - 2 * WALL_WIDTH, height - WALL_WIDTH);
     // Lily pad spawning logic
@@ -684,7 +754,6 @@ function animate(ctx, t, width, height) {
         }
         // End event after swing
         if (netEvent.t >= 1000) {
-            console.log('setting event to null')
             netEvent = null;
         }
 
@@ -943,7 +1012,10 @@ function animate(ctx, t, width, height) {
         }
         // Behavior logic
         let vx = f.vx, vy = f.vy;
-        if (f.behavior === 'float') {
+        if (f.behavior === 'sleep') {
+            vx = 0;
+            vy = 0;
+        } else if (f.behavior === 'float') {
             vx = 0.05 * (Math.random() - 0.5);
             vy = 0.05 * (Math.random() - 0.5);
         } else if (f.behavior === 'swim') {
@@ -986,7 +1058,7 @@ function animate(ctx, t, width, height) {
         let swimmingBackwards = (vx > 0 && f.flip) || (vx < 0 && !f.flip);
         if (swimmingBackwards) vx *= 0.25;
         f.x += vx;
-        f.y += vy + Math.sin(t * 0.08 + f.x * 0.01) * 0.2;
+        f.y += vy + (f.behavior === 'sleep' ? 0 : Math.sin(t * 0.08 + f.x * 0.01) * 0.2);
         drawFish(ctx, f, t);
         // Prevent fish from leaving tank (bounce off tank walls)
         const minX = WALL_WIDTH + f.size * 0.7;
