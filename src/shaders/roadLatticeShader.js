@@ -1,3 +1,7 @@
+// Pure function for car turning logic (for unit testing)
+// Inputs: car (object), intersection (object), turn ('left'|'right'|'straight'), GRID_SIZE
+// Returns: {dir, direction, road, lane, pos}
+
 // roadLatticeShader.js
 // Draws a lattice of two-lane roads with intersections, stop signs/lights, and cars following traffic rules.
 
@@ -6,8 +10,8 @@ const LANE_MARK_COLOR = '#fff';
 const INTERSECTION_SIZE = 48;
 const ROAD_WIDTH = 50;
 const LANE_WIDTH = ROAD_WIDTH / 2;
-const GRID_SIZE = 10; // 5x5 grid
-const NUM_CARS = 10;
+const GRID_SIZE = 3; // 5x5 grid
+const NUM_CARS = 2;
 const CAR_LENGTH = 24;
 const CAR_WIDTH = 12;
 const CAR_COLOR = '#2e8b57';
@@ -16,9 +20,51 @@ const LIGHT_GREEN = '#0c0';
 const LIGHT_RED = '#c00';
 const LIGHT_YELLOW = '#cc0';
 const STOP_SIGNS_ENABLED = false;
-// Helper: random choice
-function choice(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
 
+export function computeTurn(car, intersection, turn, GRID_SIZE) {
+  // car.dir: 'h' or 'v', car.direction: 1 or -1
+  // intersection.x, intersection.y: grid coordinates (1..GRID_SIZE-1)
+  if (turn === 'left') {
+    if (car.dir === 'h') {
+      // horizontal to vertical, reverse direction
+      let newRoad = intersection.y;
+      let newDir = 'v';
+      let newDirection = car.direction === 1 ? -1 : 1;
+      let newLane = newDirection === -1 ? 1 : 0;
+      let newPos = intersection.y / GRID_SIZE;
+      return { dir: newDir, direction: newDirection, road: newRoad, lane: newLane, pos: newPos };
+    } else {
+      // vertical to horizontal, reverse direction
+      let newRoad = intersection.y; // FIX: use intersection.y for horizontal road
+      let newDir = 'h';
+      let newDirection = car.direction === 1 ? -1 : 1;
+      let newLane = newDirection === -1 ? 0 : 1;
+      let newPos = intersection.x / GRID_SIZE;
+      return { dir: newDir, direction: newDirection, road: newRoad, lane: newLane, pos: newPos };
+    }
+  } else if (turn === 'right') {
+    if (car.dir === 'h') {
+      // horizontal to vertical, keep direction
+      let newRoad = intersection.x; // FIX: use intersection.x for vertical road
+      let newDir = 'v';
+      let newDirection = car.direction;
+      let newLane = car.direction === 1 ? 0 : 1;
+      let newPos = intersection.y / GRID_SIZE;
+      return { dir: newDir, direction: newDirection, road: newRoad, lane: newLane, pos: newPos };
+    } else {
+      // vertical to horizontal, keep direction
+      let newRoad = intersection.y; // FIX: use intersection.y for horizontal road
+      let newDir = 'h';
+      let newDirection = car.direction;
+      let newLane = car.direction === 1 ? 1 : 0;
+      let newPos = intersection.x / GRID_SIZE;
+      return { dir: newDir, direction: newDirection, road: newRoad, lane: newLane, pos: newPos };
+    }
+  } else {
+    // straight: no change except mark as turned
+    return { dir: car.dir, direction: car.direction, road: car.road, lane: car.lane, pos: car.pos };
+  }
+}
 // Intersection object
 function makeIntersection(x, y) {
   const r = Math.random();
@@ -365,12 +411,14 @@ function updateCars(dt, w, h) {
     let atStopSign = false;
     let stopPos = null;
     // If car is in 'clearingIntersection' mode, ignore signals until clear
-    if (car.clearingIntersection && nextInter && interDist < 0.04) {
+    // If car is in 'clearingIntersection' mode, ignore stop lights/signs until fully clear
+    if (car.clearingIntersection) {
       shouldStop = false;
-      // After clearing intersection, reset stop wait
-      if (interDist < 0.01) {
+      // After clearing intersection, reset stop wait and stopped state
+      if (!nextInter || interDist > 0.04) {
         car._stopWait = 0;
         car.clearingIntersection = false;
+        car.stopped = false;
       }
     } else if (nextInter && interDist < 0.04) {
       if (nextInter.type === 'stopSign') {
@@ -382,6 +430,8 @@ function updateCars(dt, w, h) {
           if (car._stopWait > 0.8 + Math.random() * 0.7) {
             shouldStop = false;
             car.clearingIntersection = true;
+            car._stopWait = 0;
+            car.stopped = false;
           } else {
             shouldStop = true;
           }
@@ -395,13 +445,17 @@ function updateCars(dt, w, h) {
         }
         if (!shouldStop) {
           car.clearingIntersection = true;
+          car._stopWait = 0;
+          car.stopped = false;
         }
         car.waitingForStopQueue = false;
         car.stopQueueKey = null;
-        car._stopWait = 0;
       } else if (nextInter.type === 'empty') {
         // No stop or light, just proceed
         shouldStop = false;
+        car.clearingIntersection = false;
+        car._stopWait = 0;
+        car.stopped = false;
       }
     } else {
       // Reset all stop-related state when not at an intersection
@@ -584,9 +638,6 @@ function updateIntersections(dt) {
 }
 
 function animate(ctx, t, width, height) {
-  if (!state.lastInit || Date.now() - state.lastInit > 1000 * 60) {
-    resetState(width, height);
-  }
   let dt = 0.016;
   state.t += dt;
   ctx.clearRect(0, 0, width, height);
