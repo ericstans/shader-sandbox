@@ -56,6 +56,9 @@ function makeCar(road, lane, dir, pos) {
     accelerating: false,
     turnSignal: null, // 'left', 'right', or null
     turnSignalTimer: 0,
+    nextTurn: null, // 'left', 'right', 'straight', or null
+    nextTurnSignal: null, // 'left', 'right', or null
+    halfwayTurnSet: false, // true if halfway decision made for this intersection
   };
 }
 
@@ -281,6 +284,7 @@ function updateCars(dt, w, h) {
     let nextInter = null;
     let interDist = 1;
     let interKey = null;
+    let interCenter = null;
     for (let j = 0; j < state.intersections.length; j++) {
       const inter = state.intersections[j];
       if (car.dir === 'h' && Math.abs((car.road + 1) - inter.y) < 0.2) {
@@ -290,6 +294,7 @@ function updateCars(dt, w, h) {
           nextInter = inter;
           interDist = Math.abs(interX - car.pos);
           interKey = `h${inter.x},${inter.y}`;
+          interCenter = interX;
         }
       } else if (car.dir === 'v' && Math.abs((car.road + 1) - inter.x) < 0.2) {
         let interY = inter.y / GRID_SIZE;
@@ -298,8 +303,37 @@ function updateCars(dt, w, h) {
           nextInter = inter;
           interDist = Math.abs(interY - car.pos);
           interKey = `v${inter.x},${inter.y}`;
+          interCenter = interY;
         }
       }
+    }
+
+    // --- Halfway to intersection: decide next turn and set turn signal ---
+    if (nextInter && interDist < 0.5 && !car.halfwayTurnSet) {
+      // Only set halfwayTurnSet if not already set for this intersection
+      // Decide next turn: left, right, or straight
+      let turnRand = Math.random();
+      if (turnRand < 0.25) {
+        car.nextTurn = 'left';
+        car.nextTurnSignal = 'left';
+      } else if (turnRand < 0.5) {
+        car.nextTurn = 'right';
+        car.nextTurnSignal = 'right';
+      } else {
+        car.nextTurn = 'straight';
+        car.nextTurnSignal = null;
+      }
+      car.turnSignal = car.nextTurnSignal;
+      car.turnSignalTimer = 999; // stays on until intersection
+      car.halfwayTurnSet = true;
+    }
+    // Reset halfwayTurnSet when not approaching any intersection
+    if (!nextInter || interDist > 0.5) {
+      car.halfwayTurnSet = false;
+      car.nextTurn = null;
+      car.nextTurnSignal = null;
+      car.turnSignal = null;
+      car.turnSignalTimer = 0;
     }
 
     // --- Find nearest car ahead in same lane/road/dir ---
@@ -431,13 +465,9 @@ function updateCars(dt, w, h) {
         for (let idx = 0; idx < intersectionCenters.length; idx++) {
           let c = intersectionCenters[idx];
           if (Math.abs(car.pos - c) < 0.03) {
-            // At intersection center: randomly decide to turn or go straight
-            let turn = Math.random();
+            // At intersection center: use pre-decided nextTurn
             let intersectionIdx = Math.round(c * (GRID_SIZE - 1));
-            // Only allow turns if the new road index is within 1 and GRID_SIZE-2
-            if (turn < 0.25) { // Left turn
-                car.turnSignal = 'left';
-                car.turnSignalTimer = 0.5;
+            if (car.nextTurn === 'left') {
               if (car.dir === 'h') {
                 let newRoad = intersectionIdx;
                 if (newRoad > 0 && newRoad < GRID_SIZE - 1) {
@@ -445,9 +475,8 @@ function updateCars(dt, w, h) {
                   car.direction = car.direction === 1 ? -1 : 1;
                   car.road = newRoad;
                   car.lane = car.direction === -1 ? 1 : 0;
-                  car.pos = intersectionObjs[idx].y / GRID_SIZE; // Always set to intersection center
+                  car.pos = intersectionObjs[idx].y / GRID_SIZE;
                   car._hasTurned = true;
-                  break;
                 }
               } else {
                 let newRoad = intersectionIdx;
@@ -456,44 +485,40 @@ function updateCars(dt, w, h) {
                   car.direction = car.direction === 1 ? -1 : 1;
                   car.road = newRoad;
                   car.lane = car.direction === -1 ? 0 : 1;
-                  car.pos = intersectionObjs[idx].x / GRID_SIZE; // Always set to intersection center
+                  car.pos = intersectionObjs[idx].x / GRID_SIZE;
                   car._hasTurned = true;
-                  break;
                 }
               }
-            } else if (turn < 0.5) { // Right turn
-                car.turnSignal = 'right';
-                car.turnSignalTimer = 0.5;
+            } else if (car.nextTurn === 'right') {
               if (car.dir === 'h') {
                 let newRoad = intersectionIdx;
                 if (newRoad > 0 && newRoad < GRID_SIZE - 1) {
                   car.dir = 'v';
                   car.road = newRoad;
                   car.lane = car.direction === 1 ? 0 : 1;
-                  car.pos = intersectionObjs[idx].y / GRID_SIZE; // Always set to intersection center
+                  car.pos = intersectionObjs[idx].y / GRID_SIZE;
                   car._hasTurned = true;
-                  break;
                 }
               } else {
-                car.turnSignal = null;
                 let newRoad = intersectionIdx;
                 if (newRoad > 0 && newRoad < GRID_SIZE - 1) {
                   car.dir = 'h';
                   car.road = newRoad;
                   car.lane = car.direction === 1 ? 1 : 0;
-                  car.pos = intersectionObjs[idx].x / GRID_SIZE; // Always set to intersection center
+                  car.pos = intersectionObjs[idx].x / GRID_SIZE;
                   car._hasTurned = true;
-                  break;
                 }
               }
+            } else {
+              // Go straight: do nothing special, just mark as turned
+              car._hasTurned = true;
             }
-            // Go straight: do nothing special, just mark as turned
-            car._hasTurned = true;
+            // Turn signal off after intersection
+            car.turnSignal = null;
+            car.turnSignalTimer = 0;
+            car.nextTurn = null;
+            car.nextTurnSignal = null;
             break;
-          }
-          if (car.turnSignalTimer > 0) {
-            car.turnSignalTimer -= dt;
-            if (car.turnSignalTimer <= 0) car.turnSignal = null;
           }
         }
       }
@@ -512,6 +537,8 @@ function updateCars(dt, w, h) {
       if (car.direction === 1 && car.pos > 1) car.pos = 0;
       if (car.direction === -1 && car.pos < 0) car.pos = 1;
     }
+    // Turn signal timer logic (for blinking, not for auto-off)
+    // (No longer used for auto-off, but kept for blinking)
   }
   // --- End: Car queueing and collision avoidance ---
 }
