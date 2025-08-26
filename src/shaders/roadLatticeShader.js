@@ -15,19 +15,26 @@ const STOP_SIGN_COLOR = '#c00';
 const LIGHT_GREEN = '#0c0';
 const LIGHT_RED = '#c00';
 const LIGHT_YELLOW = '#cc0';
-
+const STOP_SIGNS_ENABLED = false;
 // Helper: random choice
 function choice(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
 
 // Intersection object
 function makeIntersection(x, y) {
-//   if (Math.random() < 0.5) {
-//     // Four-way stop sign
-//     return {
-//       x, y,
-//       type: 'stopSign',
-//     };
-//   } else {
+  const r = Math.random();
+  if (r < 0.33) {
+    // Empty intersection
+    return {
+      x, y,
+      type: 'empty',
+    };
+  } else if (STOP_SIGNS_ENABLED && r < 0.66) {
+    // Four-way stop sign
+    return {
+      x, y,
+      type: 'stopSign',
+    };
+  } else {
     // Stop light: two groups (NS and EW), each with its own state/timer
     return {
       x, y,
@@ -35,7 +42,7 @@ function makeIntersection(x, y) {
       lightNS: { state: 'green', timer: 0 },
       lightEW: { state: 'red', timer: 0 },
     };
-//   }
+  }
 }
 
 // Car object
@@ -162,6 +169,7 @@ function drawRoads(ctx, w, h) {
 
 function drawIntersections(ctx, w, h) {
   for (const inter of state.intersections) {
+    if (inter.type === 'empty') continue;
     let px = inter.x * w / GRID_SIZE;
     let py = inter.y * h / GRID_SIZE;
     ctx.save();
@@ -199,7 +207,7 @@ function drawIntersections(ctx, w, h) {
         ctx.stroke();
         ctx.restore();
       }
-    } else {
+    } else if (inter.type === 'stopLight') {
       // Each direction gets its own color/state
       const offsets = [
         { dx: 0, dy: -18, rot: 0, dir: 'NS' }, // North
@@ -391,6 +399,9 @@ function updateCars(dt, w, h) {
         car.waitingForStopQueue = false;
         car.stopQueueKey = null;
         car._stopWait = 0;
+      } else if (nextInter.type === 'empty') {
+        // No stop or light, just proceed
+        shouldStop = false;
       }
     } else {
       // Reset all stop-related state when not at an intersection

@@ -1,0 +1,13 @@
+[1mdiff --git a/src/shaders/roadLatticeShader.js b/src/shaders/roadLatticeShader.js[m
+[1mindex 0da9ac6..aed4519 100644[m
+[1m--- a/src/shaders/roadLatticeShader.js[m
+[1m+++ b/src/shaders/roadLatticeShader.js[m
+[36m@@ -6,7 +6,7 @@[m [mconst LANE_MARK_COLOR = '#fff';[m
+ const INTERSECTION_SIZE = 48;[m
+ const ROAD_WIDTH = 50;[m
+ const LANE_WIDTH = ROAD_WIDTH / 2;[m
+[31m-const GRID_SIZE = 10; // 5x5 grid[m
+[32m+[m[32mconst GRID_SIZE = 3; // 5x5 grid[m
+ const NUM_CARS = 10;[m
+ const CAR_LENGTH = 24;[m
+ const CAR_WIDTH = 12;[m
