@@ -59,6 +59,7 @@ import mandelbrotShader from './shaders/mandelbrotShader.js';
 import { digitalRainShader } from './shaders/digitalRainShader.js';
 import fishTankShader from './shaders/fishTankShader.js';
 import { randomizeGlyphLineWeights } from './utilities/glyphGenerators.js';
+import roadLatticeShader from './shaders/roadLatticeShader.js';
 export const shaders = [
 	{ shader: plasma1, displayName: 'Demo Scene 1' },
 	{ shader: plasma2, displayName: 'Demo Scene 2' },
@@ -116,6 +117,7 @@ export const shaders = [
 	{ shader: plasmaPongShader, displayName: 'Plasma Pong' },
 	{ shader: tetrisShader, displayName: 'Tetris' },
 	{ shader: puyoShader, displayName: 'Puyo Puyo' },
-    { shader: fishTankShader, displayName: 'Fish Tank' },
-	{ shader: rainstickShader, displayName: 'Rainstick' }
+	{ shader: fishTankShader, displayName: 'Fish Tank' },
+	{ shader: rainstickShader, displayName: 'Rainstick' },
+	roadLatticeShader
 ];
