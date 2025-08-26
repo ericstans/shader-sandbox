@@ -18,6 +18,7 @@ const REST_THRESHOLD = 0.08;
 
 
 let state = null;
+let deviceAlpha = null; // For device orientation (alpha)
 let uiElements = null;
 let BLINK_ENABLED = false;
 let CUTOFF_FREQ = 2000;
@@ -186,11 +187,26 @@ export function onChangedAway() {
   uiElements = null;
 }
 
+// Listen for device orientation events (mobile)
+if (typeof window !== 'undefined' && !window._rainstickGyroListener) {
+  window._rainstickGyroListener = true;
+  window.addEventListener('deviceorientation', function(event) {
+    // alpha: compass direction (yaw), in degrees (0 to 360)
+    deviceAlpha = event.alpha != null ? event.alpha : null;
+  }, true);
+}
+
 function animate(ctx, t, width, height) {
-  // --- Gyroscope debug values ---
-  if (typeof window._rainstickGyro === 'undefined') {
-    window._rainstickGyro = { alpha: 0, beta: 0, gamma: 0 };
+  // --- Gravity direction indicator arrow ---
+  // Show real-world gravity direction (down), not affected by stick rotation
+  let gravityAngle;
+  if (deviceAlpha !== null && !isNaN(deviceAlpha)) {
+    // Use alpha (compass direction/yaw) for gravity direction; alpha=90 is down, add Math.PI to invert
+    gravityAngle = (deviceAlpha * Math.PI / 180) + 2 * Math.PI;
+  } else {
+    gravityAngle = Math.PI / 2; // Downwards
   }
+
   if (!state || ctx._rainstickW !== width || ctx._rainstickH !== height) {
     reset();
     ctx._rainstickW = width;
@@ -213,7 +229,7 @@ function animate(ctx, t, width, height) {
       uiElements.qLabel.textContent = `Q: ${BANDPASS_Q}`;
     }
   }
-  if (!uiElements || !uiElements.slider || !document.body.contains(uiElements.slider) || !uiElements.soundDropdown || !document.body.contains(uiElements.soundDropdown) || !uiElements.qSlider || !document.body.contains(uiElements.qSlider) || !uiElements.blinkCheckbox || !document.body.contains(uiElements.blinkCheckbox) || !uiElements.cutoffSlider || !document.body.contains(uiElements.cutoffSlider)) {
+  if (!uiElements || !uiElements.slider || !document.body.contains(uiElements.slider) || !uiElements.soundDropdown || !document.body.contains(uiElements.soundDropdown) || !uiElements.qSlider || !document.body.contains(uiElements.qSlider) || !uiElements.blinkCheckbox || !document.body.contains(uiElements.blinkCheckbox) || !uiElements.cutoffSlider || !document.body.contains(uiElements.cutoffSlider) || !uiElements.gammaLabel || !document.body.contains(uiElements.gammaLabel)) {
     // Cutoff slider
     const cutoffSlider = document.createElement('input');
     cutoffSlider.type = 'range';
@@ -344,13 +360,22 @@ function animate(ctx, t, width, height) {
     document.body.appendChild(blinkLabel);
     document.body.appendChild(cutoffSlider);
     document.body.appendChild(cutoffLabel);
+  // Gamma axis label
+  const gammaLabel = document.createElement('span');
+  gammaLabel.textContent = 'Gamma: --';
+  gammaLabel.style.position = 'absolute';
+  gammaLabel.style.left = (ctx.canvas.getBoundingClientRect().left + 20) + 'px';
+  gammaLabel.style.top = (ctx.canvas.getBoundingClientRect().top + 170) + 'px';
+  gammaLabel.style.zIndex = 1000;
+  gammaLabel.style.color = 'white';
+  document.body.appendChild(gammaLabel);
     slider.addEventListener('input', e => {
       window.NUM_PEBBLES = parseInt(slider.value);
       label.textContent = `Balls: ${slider.value}`;
       NUM_PEBBLES = parseInt(slider.value);
       reset();
     });
-    uiElements = { slider, label, soundDropdown, soundLabel, qSlider, qLabel, blinkCheckbox, blinkLabel, cutoffSlider, cutoffLabel };
+  uiElements = { slider, label, soundDropdown, soundLabel, qSlider, qLabel, blinkCheckbox, blinkLabel, cutoffSlider, cutoffLabel, gammaLabel };
 
   }
   // Keep UI in sync with canvas position
@@ -376,19 +401,32 @@ function animate(ctx, t, width, height) {
       uiElements.qLabel.style.left = (rect.left + 150) + 'px';
       uiElements.qLabel.style.top = (rect.top + 78) + 'px';
     }
-        // Keep cutoff slider in sync with canvas position
+    // Keep cutoff slider in sync with canvas position
     if (uiElements.cutoffSlider) {
-      const rect = ctx.canvas.getBoundingClientRect();
       uiElements.cutoffSlider.style.left = (rect.left + 20) + 'px';
       uiElements.cutoffSlider.style.top = (rect.top + 140) + 'px';
       uiElements.cutoffLabel.style.left = (rect.left + 150) + 'px';
       uiElements.cutoffLabel.style.top = (rect.top + 138) + 'px';
     }
+    // Keep gamma label in sync with canvas position
+    if (uiElements.gammaLabel) {
+      uiElements.gammaLabel.style.left = (rect.left + 20) + 'px';
+      uiElements.gammaLabel.style.top = (rect.top + 170) + 'px';
+    }
+  }
+
+  // Update alpha label value
+  if (uiElements && uiElements.gammaLabel) {
+    if (deviceAlpha !== null && !isNaN(deviceAlpha)) {
+      uiElements.gammaLabel.textContent = `Alpha: ${deviceAlpha.toFixed(1)}°`;
+    } else {
+      uiElements.gammaLabel.textContent = 'Alpha: --';
+    }
   }
 
 
 
-  // Handle mouse drag for rotation (desktop) and device orientation (mobile)
+  // Handle mouse drag for rotation
   if (!window._rainstickEvents) {
     window._rainstickEvents = true;
     ctx.canvas.addEventListener('mousedown', e => {
@@ -406,42 +444,23 @@ function animate(ctx, t, width, height) {
     window.addEventListener('mouseup', e => {
       state.dragging = false;
     });
-
-    // Device orientation (gyroscope) for mobile
-    function handleOrientation(event) {
-      // Save for debug display
-      window._rainstickGyro = {
-        alpha: event.alpha,
-        beta: event.beta,
-        gamma: event.gamma
-      };
-      // Use gamma (left-right tilt) for landscape, beta (front-back tilt) for portrait
-      let isPortrait = window.innerHeight > window.innerWidth;
-      let angleDeg = isPortrait ? event.gamma : event.beta;
-      // Clamp and convert to radians
-      if (typeof angleDeg === 'number') {
-        // gamma: -90 (left) to 90 (right), beta: -180 (up) to 180 (down)
-        // We'll map -90..90 to -pi/2..pi/2 for gamma, or -pi/2..pi/2 for beta
-        let max = isPortrait ? 90 : 90;
-        let min = isPortrait ? -90 : -90;
-        let clamped = Math.max(min, Math.min(max, angleDeg));
-        let rad = clamped * Math.PI / 180;
-        // Optionally add offset for natural vertical
-        state.angle = rad;
-      }
-    }
-    if (window.DeviceOrientationEvent) {
-      window.addEventListener('deviceorientation', handleOrientation, true);
-    }
   }
 
   // Physics for pebbles (run at half rate)
   if (doPhysics) {
-    let sinA = Math.sin(state.angle), cosA = Math.cos(state.angle);
+    // Use device orientation if available (mobile), otherwise use state.angle
+    let angleRad;
+    if (deviceAlpha !== null && !isNaN(deviceAlpha)) {
+      // Use alpha (compass direction/yaw) for gravity direction; alpha=90 is down, add Math.PI to invert
+      angleRad = (deviceAlpha * Math.PI / 180) + 2 * Math.PI;
+    } else {
+      angleRad = (state && typeof state.angle === 'number') ? state.angle : 0;
+    }
+    let sinA = Math.sin(angleRad), cosA = Math.cos(angleRad);
     const RADIUS = 5;
     for (let i = 0; i < state.pebbles.length; i++) {
       let pebble = state.pebbles[i];
-      // Gravity along stick
+      // Gravity along stick (now follows device orientation if available)
       pebble.vx += GRAVITY * sinA;
       pebble.vy += GRAVITY * cosA;
       pebble.vx *= FRICTION;
@@ -633,15 +652,33 @@ function animate(ctx, t, width, height) {
     ctx.stroke();
   }
 
-  // Draw gyroscope debug info (top left corner)
+
+  ctx.restore();
+  ctx.restore();
+
+  // Draw gravity direction arrow in bottom right (after all restores)
   ctx.save();
-  ctx.setTransform(1, 0, 0, 1, 0, 0);
-  ctx.font = '16px monospace';
-  ctx.fillStyle = 'yellow';
-  let gyro = window._rainstickGyro || { alpha: 0, beta: 0, gamma: 0 };
-  ctx.fillText(`Gyro α: ${gyro.alpha !== undefined ? gyro.alpha.toFixed(1) : 'n/a'}`, 270, 24);
-  ctx.fillText(`Gyro β: ${gyro.beta !== undefined ? gyro.beta.toFixed(1) : 'n/a'}`, 270, 44);
-  ctx.fillText(`Gyro γ: ${gyro.gamma !== undefined ? gyro.gamma.toFixed(1) : 'n/a'}`, 270, 64);
+  const arrowLen = 40;
+  const margin = 60;
+  const arrowX = width - margin - arrowLen;
+  const arrowY = height - margin;
+  ctx.translate(arrowX, arrowY);
+  ctx.rotate(gravityAngle);
+  // Arrow body
+  ctx.beginPath();
+  ctx.moveTo(0, 0);
+  ctx.lineTo(arrowLen, 0);
+  ctx.strokeStyle = '#33f';
+  ctx.lineWidth = 5;
+  ctx.stroke();
+  // Arrow head
+  ctx.beginPath();
+  ctx.moveTo(arrowLen, 0);
+  ctx.lineTo(arrowLen - 12, -8);
+  ctx.lineTo(arrowLen - 12, 8);
+  ctx.closePath();
+  ctx.fillStyle = '#33f';
+  ctx.fill();
   ctx.restore();
   // Keep UI in sync with canvas position
   if (uiElements && uiElements.slider) {
