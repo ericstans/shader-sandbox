@@ -1,3 +1,54 @@
+// --- AudioContext unlock veil ---
+let audioVeil = null;
+function showAudioVeil() {
+  if (audioVeil) return;
+  audioVeil = document.createElement('div');
+  audioVeil.style.position = 'fixed';
+  audioVeil.style.left = '0';
+  audioVeil.style.top = '0';
+  audioVeil.style.width = '100vw';
+  audioVeil.style.height = '100vh';
+  audioVeil.style.background = 'rgba(0,0,0,0.85)';
+  audioVeil.style.color = 'white';
+  audioVeil.style.display = 'flex';
+  audioVeil.style.alignItems = 'center';
+  audioVeil.style.justifyContent = 'center';
+  audioVeil.style.fontSize = '2.5em';
+  audioVeil.style.zIndex = '99999';
+  audioVeil.style.userSelect = 'none';
+  audioVeil.innerText = 'Tap for Audio';
+  audioVeil.addEventListener('pointerdown', unlockAudioContext);
+  document.body.appendChild(audioVeil);
+}
+
+function removeAudioVeil() {
+  if (audioVeil && audioVeil.parentNode) {
+    audioVeil.parentNode.removeChild(audioVeil);
+    audioVeil = null;
+  }
+}
+
+function unlockAudioContext() {
+  if (!window._rainstickAudioCtx) {
+    window._rainstickAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+  const ctx = window._rainstickAudioCtx;
+  if (ctx.state === 'suspended') {
+    ctx.resume();
+  }
+  removeAudioVeil();
+}
+// Show the veil if audio context is not running
+if (typeof window !== 'undefined') {
+  document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(() => {
+      let ctx = window._rainstickAudioCtx;
+      if (!ctx || ctx.state === 'suspended') {
+        showAudioVeil();
+      }
+    }, 100);
+  });
+}
 // Minimum speed required to make sound
 let BANDPASS_Q = 18;
 
@@ -75,6 +126,9 @@ function playSound(volume, speed = 1) {
     window._rainstickAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
   }
   const ctx = window._rainstickAudioCtx;
+  if (audioVeil && ctx.state === 'running') {
+    removeAudioVeil();
+  }
   // Only play sound if speed is above threshold
   if (speed < MIN_SOUND_SPEED) return;
   // Count currently playing sounds
