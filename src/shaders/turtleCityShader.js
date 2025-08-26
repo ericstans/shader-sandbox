@@ -105,9 +105,99 @@ function animate(ctx, t, width, height) {
         cachedCity = { width, height, cityW, buildings };
     }
 
-    // Draw city buildings and domes first (unmasked, so they can extend above the shell)
-    for (let i = 0; i < cachedCity.buildings.length; i++) {
-        let b = cachedCity.buildings[i];
+    // Sort buildings by their base y (back to front)
+    let sortedBuildings = [...cachedCity.buildings].sort((a, b) => (a.by + a.bH) - (b.by + b.bH));
+    for (let i = 0; i < sortedBuildings.length; i++) {
+        let b = sortedBuildings[i];
+        // Draw dome/ornament BEFORE building body, so it appears behind
+        if (b.type === 1) {
+            ctx.save();
+            // Dome
+            ctx.beginPath();
+            ctx.ellipse(b.bx, b.by, b.bW * 0.5, b.bW * 0.32, 0, 0, Math.PI * 2);
+            ctx.fillStyle = b.domeColor;
+            ctx.globalAlpha = 0.7;
+            ctx.shadowColor = '#fff8';
+            ctx.shadowBlur = 6;
+            ctx.fill();
+            // Spire
+            ctx.beginPath();
+            ctx.moveTo(b.bx, b.by - b.bW * 0.32);
+            ctx.lineTo(b.bx, b.by - b.bW * 0.32 - b.bH * 0.22);
+            ctx.lineWidth = 2.2;
+            ctx.strokeStyle = '#bcd';
+            ctx.globalAlpha = 0.7;
+            ctx.stroke();
+            ctx.restore();
+        } else if (b.type === 2) {
+            ctx.save();
+            // Tall spire tip
+            ctx.beginPath();
+            ctx.moveTo(b.bx, b.by);
+            ctx.lineTo(b.bx, b.by - b.bH * 0.7);
+            ctx.lineWidth = 3.5;
+            ctx.strokeStyle = b.domeColor;
+            ctx.globalAlpha = 0.8;
+            ctx.stroke();
+            // Spire tip
+            ctx.beginPath();
+            ctx.arc(b.bx, b.by - b.bH * 0.7, b.bW * 0.18, 0, Math.PI * 2);
+            ctx.fillStyle = b.domeColor;
+            ctx.globalAlpha = 0.8;
+            ctx.shadowColor = '#fff8';
+            ctx.shadowBlur = 6;
+            ctx.fill();
+            ctx.restore();
+        } else if (b.type === 3) {
+            ctx.save();
+            // Round tower dome
+            ctx.beginPath();
+            ctx.ellipse(b.bx, b.by, b.bW * 0.5, b.bW * 0.32, 0, 0, Math.PI * 2);
+            ctx.fillStyle = b.domeColor;
+            ctx.globalAlpha = 0.7;
+            ctx.shadowColor = '#fff8';
+            ctx.shadowBlur = 6;
+            ctx.fill();
+            ctx.restore();
+        } else if (b.type === 4) {
+            ctx.save();
+            // Brick building: rhombus roof ornament
+            ctx.beginPath();
+            let rhW = b.bW * 0.32;
+            let rhH = b.bW * 0.22;
+            ctx.moveTo(b.bx, b.by - rhH); // top
+            ctx.lineTo(b.bx + rhW, b.by); // right
+            ctx.lineTo(b.bx, b.by + rhH); // bottom
+            ctx.lineTo(b.bx - rhW, b.by); // left
+            ctx.closePath();
+            ctx.fillStyle = b.domeColor;
+            ctx.globalAlpha = 0.8;
+            ctx.shadowColor = '#fff8';
+            ctx.shadowBlur = 6;
+            ctx.fill();
+            ctx.restore();
+        } else {
+            ctx.save();
+            // Default dome
+            ctx.beginPath();
+            ctx.ellipse(b.bx, b.by, b.bW * 0.5, b.bW * 0.32, 0, 0, Math.PI * 2);
+            ctx.fillStyle = b.domeColor;
+            ctx.globalAlpha = 0.7;
+            ctx.shadowColor = '#fff8';
+            ctx.shadowBlur = 6;
+            ctx.fill();
+            // Spire
+            ctx.beginPath();
+            ctx.moveTo(b.bx, b.by - b.bW * 0.32);
+            ctx.lineTo(b.bx, b.by - b.bW * 0.32 - b.bH * 0.22);
+            ctx.lineWidth = 2.2;
+            ctx.strokeStyle = '#bcd';
+            ctx.globalAlpha = 0.7;
+            ctx.stroke();
+            ctx.restore();
+        }
+
+        // Now draw the building body in front
         ctx.save();
         ctx.beginPath();
         if (b.type === 3) {
@@ -160,89 +250,6 @@ function animate(ctx, t, width, height) {
                 ctx.globalAlpha = 0.7 + 0.2 * Math.sin(elapsed * 2 + i + w);
                 ctx.fill();
             }
-        }
-        ctx.restore();
-    }
-    for (let i = 0; i < cachedCity.buildings.length; i++) {
-        let b = cachedCity.buildings[i];
-        ctx.save();
-        if (b.type === 1) {
-            // Dome
-            ctx.beginPath();
-            ctx.ellipse(b.bx, b.by, b.bW * 0.5, b.bW * 0.32, 0, 0, Math.PI * 2);
-            ctx.fillStyle = b.domeColor;
-            ctx.globalAlpha = 0.7;
-            ctx.shadowColor = '#fff8';
-            ctx.shadowBlur = 6;
-            ctx.fill();
-            // Spire
-            ctx.beginPath();
-            ctx.moveTo(b.bx, b.by - b.bW * 0.32);
-            ctx.lineTo(b.bx, b.by - b.bW * 0.32 - b.bH * 0.22);
-            ctx.lineWidth = 2.2;
-            ctx.strokeStyle = '#bcd';
-            ctx.globalAlpha = 0.7;
-            ctx.stroke();
-        } else if (b.type === 2) {
-            // Tall spire tip
-            ctx.beginPath();
-            ctx.moveTo(b.bx, b.by);
-            ctx.lineTo(b.bx, b.by - b.bH * 0.7);
-            ctx.lineWidth = 3.5;
-            ctx.strokeStyle = b.domeColor;
-            ctx.globalAlpha = 0.8;
-            ctx.stroke();
-            // Spire tip
-            ctx.beginPath();
-            ctx.arc(b.bx, b.by - b.bH * 0.7, b.bW * 0.18, 0, Math.PI * 2);
-            ctx.fillStyle = b.domeColor;
-            ctx.globalAlpha = 0.8;
-            ctx.shadowColor = '#fff8';
-            ctx.shadowBlur = 6;
-            ctx.fill();
-        } else if (b.type === 3) {
-            // Round tower dome
-            ctx.beginPath();
-            ctx.ellipse(b.bx, b.by, b.bW * 0.5, b.bW * 0.32, 0, 0, Math.PI * 2);
-            ctx.fillStyle = b.domeColor;
-            ctx.globalAlpha = 0.7;
-            ctx.shadowColor = '#fff8';
-            ctx.shadowBlur = 6;
-            ctx.fill();
-        } else if (b.type === 4) {
-            // Brick building: rhombus roof ornament
-            ctx.save();
-            ctx.beginPath();
-            let rhW = b.bW * 0.32;
-            let rhH = b.bW * 0.22;
-            ctx.moveTo(b.bx, b.by - rhH); // top
-            ctx.lineTo(b.bx + rhW, b.by); // right
-            ctx.lineTo(b.bx, b.by + rhH); // bottom
-            ctx.lineTo(b.bx - rhW, b.by); // left
-            ctx.closePath();
-            ctx.fillStyle = b.domeColor;
-            ctx.globalAlpha = 0.8;
-            ctx.shadowColor = '#fff8';
-            ctx.shadowBlur = 6;
-            ctx.fill();
-            ctx.restore();
-        } else {
-            // Default dome
-            ctx.beginPath();
-            ctx.ellipse(b.bx, b.by, b.bW * 0.5, b.bW * 0.32, 0, 0, Math.PI * 2);
-            ctx.fillStyle = b.domeColor;
-            ctx.globalAlpha = 0.7;
-            ctx.shadowColor = '#fff8';
-            ctx.shadowBlur = 6;
-            ctx.fill();
-            // Spire
-            ctx.beginPath();
-            ctx.moveTo(b.bx, b.by - b.bW * 0.32);
-            ctx.lineTo(b.bx, b.by - b.bW * 0.32 - b.bH * 0.22);
-            ctx.lineWidth = 2.2;
-            ctx.strokeStyle = '#bcd';
-            ctx.globalAlpha = 0.7;
-            ctx.stroke();
         }
         ctx.restore();
     }
