@@ -6,11 +6,24 @@ const displayName = 'Turtle City (Berto)';
 
 let startTime = null;
 let cachedCity = null;
+let turtleSpecies = null;
 
 function animate(ctx, t, width, height) {
+
     if (!startTime) startTime = performance.now();
     let elapsed = (performance.now() - startTime) / 1000;
     ctx.clearRect(0, 0, width, height);
+
+    // Pick turtle species if not set or if canvas size changed
+    if (!turtleSpecies || !cachedCity || cachedCity.width !== width || cachedCity.height !== height) {
+        const speciesList = [
+            { name: 'Original', key: 'original' },
+            { name: 'Red-eared slider', key: 'slider' },
+            { name: 'Eastern box turtle', key: 'box' },
+            { name: 'Painted turtle', key: 'painted' }
+        ];
+        turtleSpecies = speciesList[Math.floor(Math.random() * speciesList.length)];
+    }
 
     // Turtle body parameters (front view)
     const centerX = width / 2;
@@ -20,6 +33,32 @@ function animate(ctx, t, width, height) {
     const headR = shellW * 0.18;
     const legW = shellW * 0.18;
     const legH = shellH * 0.7;
+
+    // Species-based color palette
+    let shellColor = '#3a5c3a', shellPattern = '#5e8c5e', legColor = '#4a6c4a', headColor = '#4a6c4a', shellPatternAlpha = 0.7, shellShadow = '#000a', shellShadowBlur = 18, headShadow = '#000a', headShadowBlur = 8;
+    let sliderEar = false, boxPattern = false, paintedPattern = false;
+    if (turtleSpecies && turtleSpecies.key === 'slider') {
+        shellColor = '#3b6c3b';
+        shellPattern = '#7edc7e';
+        legColor = '#3b6c3b';
+        headColor = '#3b6c3b';
+        shellPatternAlpha = 0.8;
+        sliderEar = true;
+    } else if (turtleSpecies && turtleSpecies.key === 'box') {
+        shellColor = '#a67c2d';
+        shellPattern = '#f7e17c';
+        legColor = '#a67c2d';
+        headColor = '#a67c2d';
+        shellPatternAlpha = 0.8;
+        boxPattern = true;
+    } else if (turtleSpecies && turtleSpecies.key === 'painted') {
+        shellColor = '#2e4a3a';
+        shellPattern = '#e04a2e';
+        legColor = '#2e4a3a';
+        headColor = '#2e4a3a';
+        shellPatternAlpha = 0.8;
+        paintedPattern = true;
+    }
     // Draw back feet (behind shell and city), offset to one side, rotated outward
     for (let i = 0; i < 2; i++) {
         let side = i === 0 ? -1 : 1;
@@ -31,8 +70,8 @@ function animate(ctx, t, width, height) {
         ctx.save();
         ctx.beginPath();
         ctx.ellipse(lx, ly, legW * 0.38, legH * 0.55, angle, 0, Math.PI * 2);
-        ctx.fillStyle = '#3a5c3a';
-        ctx.shadowColor = '#0007';
+    ctx.fillStyle = legColor;
+    ctx.shadowColor = shellShadow;
         ctx.shadowBlur = 4;
         ctx.globalAlpha = 0.7;
         ctx.fill();
@@ -283,9 +322,9 @@ function animate(ctx, t, width, height) {
     ctx.save();
     ctx.beginPath();
     ctx.ellipse(centerX, baseY + shellH * 1.08, shellW * 0.08, shellH * 0.18, 0, 0, Math.PI * 2);
-    ctx.fillStyle = '#4a6c4a';
+    ctx.fillStyle = legColor;
     ctx.globalAlpha = 0.7;
-    ctx.shadowColor = '#000a';
+    ctx.shadowColor = shellShadow;
     ctx.shadowBlur = 4;
     ctx.fill();
     ctx.restore();
@@ -293,9 +332,9 @@ function animate(ctx, t, width, height) {
     ctx.save();
     ctx.beginPath();
     ctx.ellipse(centerX, baseY, shellW / 2, shellH, 0, 0, Math.PI * 2);
-    ctx.fillStyle = '#3a5c3a';
-    ctx.shadowColor = '#000a';
-    ctx.shadowBlur = 18;
+    ctx.fillStyle = shellColor;
+    ctx.shadowColor = shellShadow;
+    ctx.shadowBlur = shellShadowBlur;
     ctx.fill();
     ctx.restore();
 
@@ -303,11 +342,33 @@ function animate(ctx, t, width, height) {
     ctx.save();
     ctx.beginPath();
     ctx.ellipse(centerX, baseY, shellW * 0.38, shellH * 0.7, 0, 0, Math.PI * 2);
-    ctx.fillStyle = '#5e8c5e';
-    ctx.globalAlpha = 0.7;
+    ctx.fillStyle = shellPattern;
+    ctx.globalAlpha = shellPatternAlpha;
     ctx.shadowColor = '#fff4';
     ctx.shadowBlur = 10;
     ctx.fill();
+    // Extra shell pattern for box and painted
+    if (boxPattern) {
+        ctx.save();
+        ctx.globalAlpha = 0.7;
+        ctx.strokeStyle = '#f7e17c';
+        ctx.lineWidth = 2.5;
+        for (let i = 0; i < 5; i++) {
+            ctx.beginPath();
+            ctx.ellipse(centerX, baseY, shellW * (0.3 + i * 0.04), shellH * (0.5 + i * 0.08), 0, 0, Math.PI * 2);
+            ctx.stroke();
+        }
+        ctx.restore();
+    } else if (paintedPattern) {
+        ctx.save();
+        ctx.globalAlpha = 0.7;
+        ctx.strokeStyle = '#e04a2e';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.ellipse(centerX, baseY, shellW * 0.38, shellH * 0.7, 0, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+    }
     ctx.restore();
 
     // Legs (front view, animated, rotated outward)
@@ -323,8 +384,8 @@ function animate(ctx, t, width, height) {
         ctx.save();
         ctx.beginPath();
         ctx.ellipse(lx, ly, legW * 0.5, legH, angle, 0, Math.PI * 2);
-        ctx.fillStyle = '#4a6c4a';
-        ctx.shadowColor = '#000a';
+    ctx.fillStyle = legColor;
+    ctx.shadowColor = shellShadow;
         ctx.shadowBlur = 6;
         ctx.globalAlpha = 0.95;
         ctx.fill();
@@ -336,9 +397,9 @@ function animate(ctx, t, width, height) {
     ctx.save();
     ctx.beginPath();
     ctx.ellipse(centerX, baseY - shellH * 0.95 + headBob, headR, headR * 1.1, 0, 0, Math.PI * 2);
-    ctx.fillStyle = '#4a6c4a';
-    ctx.shadowColor = '#000a';
-    ctx.shadowBlur = 8;
+    ctx.fillStyle = headColor;
+    ctx.shadowColor = headShadow;
+    ctx.shadowBlur = headShadowBlur;
     ctx.fill();
     // Eyes
     ctx.beginPath();
@@ -347,12 +408,24 @@ function animate(ctx, t, width, height) {
     ctx.fillStyle = '#222';
     ctx.globalAlpha = 0.8;
     ctx.fill();
+    // Red-eared slider ear spot
+    if (sliderEar) {
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(centerX - headR * 0.7, baseY - shellH * 0.95 + headBob, headR * 0.18, 0, Math.PI * 2);
+        ctx.arc(centerX + headR * 0.7, baseY - shellH * 0.95 + headBob, headR * 0.18, 0, Math.PI * 2);
+        ctx.fillStyle = '#e04a2e';
+        ctx.globalAlpha = 0.85;
+        ctx.fill();
+        ctx.restore();
+    }
     ctx.restore();
 }
 
 function onResize({ canvas, ctx, width, height }) {
     startTime = null;
     cachedCity = null;
+    turtleSpecies = null;
 }
 
 // Add click-to-clear-cached-city handler (idempotent)
