@@ -4,11 +4,12 @@
 const ROAD_COLOR = '#444';
 const LANE_MARK_COLOR = '#fff';
 const INTERSECTION_SIZE = 48;
-const ROAD_WIDTH = 32;
+const ROAD_WIDTH = 50;
 const LANE_WIDTH = ROAD_WIDTH / 2;
 const GRID_SIZE = 5; // 5x5 grid
-const CAR_LENGTH = 18;
-const CAR_WIDTH = 10;
+const NUM_CARS = 300;
+const CAR_LENGTH = 24;
+const CAR_WIDTH = 12;
 const CAR_COLOR = '#2e8b57';
 const STOP_SIGN_COLOR = '#c00';
 const LIGHT_GREEN = '#0c0';
@@ -20,13 +21,13 @@ function choice(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
 
 // Intersection object
 function makeIntersection(x, y) {
-  if (Math.random() < 0.5) {
-    // Four-way stop sign
-    return {
-      x, y,
-      type: 'stopSign',
-    };
-  } else {
+//   if (Math.random() < 0.5) {
+//     // Four-way stop sign
+//     return {
+//       x, y,
+//       type: 'stopSign',
+//     };
+//   } else {
     // Stop light: two groups (NS and EW), each with its own state/timer
     return {
       x, y,
@@ -34,19 +35,23 @@ function makeIntersection(x, y) {
       lightNS: { state: 'green', timer: 0 },
       lightEW: { state: 'red', timer: 0 },
     };
-  }
+//   }
 }
 
 // Car object
 function makeCar(road, lane, dir, pos) {
   // dir: 'h' or 'v', direction: 1 (right/down) or -1 (left/up) -- direction must be passed in
+  const maxSpeed = 10 + Math.random() * 25;
   return {
     road, lane, dir, pos,
     // direction will be set by caller
-    speed: 10 + Math.random() * 25,
+    speed: 0, // start at 0, accelerate up
+    maxSpeed,
+    targetSpeed: maxSpeed,
     stopped: false,
     waitTimer: 0,
     color: CAR_COLOR,
+    accelerating: false,
   };
 }
 
@@ -69,9 +74,10 @@ function resetState(width, height) {
   }
   // Place cars on random roads
   state.cars = [];
-  for (let i = 0; i < 12; i++) {
+  for (let i = 0; i < NUM_CARS; i++) {
     let dir = Math.random() < 0.5 ? 'h' : 'v';
-    let road = dir === 'h' ? Math.floor(Math.random() * GRID_SIZE) : Math.floor(Math.random() * GRID_SIZE);
+    // Only use road indices 1 to GRID_SIZE-2 (inclusive)
+    let road = 1 + Math.floor(Math.random() * (GRID_SIZE - 2));
     let direction = Math.random() < 0.5 ? 1 : -1;
     let lane;
     if (dir === 'v') {
@@ -83,9 +89,9 @@ function resetState(width, height) {
     }
     let pos = Math.random();
     // Pass direction to makeCar
-  let car = makeCar(road, lane, dir, pos);
-  car.direction = direction;
-  state.cars.push(car);
+    let car = makeCar(road, lane, dir, pos);
+    car.direction = direction;
+    state.cars.push(car);
   }
   state.t = 0;
   state.lastInit = Date.now();
@@ -340,26 +346,45 @@ function updateCars(dt, w, h) {
 
     // --- Collision avoidance: if car ahead is too close, stop or slow down ---
     let collisionStop = false;
+    let targetSpeed = car.maxSpeed;
     if (carAhead && nearestDist < SAFE_DISTANCE * 1.1) {
       // If car ahead is stopped, stop; else, slow down
       if (carAhead.stopped) {
         collisionStop = true;
+        targetSpeed = 0;
       } else {
         // Slow down proportionally
-        car._origSpeed = car._origSpeed || car.speed;
-        car.speed = Math.max(4, car._origSpeed * (nearestDist / (SAFE_DISTANCE * 1.1)));
+        targetSpeed = Math.max(4, car.maxSpeed * (nearestDist / (SAFE_DISTANCE * 1.1)));
       }
-    } else {
-      // Restore speed if not blocked
-      if (car._origSpeed) car.speed = car._origSpeed;
     }
 
     if (shouldStop || collisionStop) {
       car.stopped = true;
       car.waitTimer += dt;
+      car.accelerating = false;
+      car.targetSpeed = 0;
     } else {
       car.stopped = false;
       car.waitTimer = 0;
+      // If just started moving, begin acceleration
+      if (car.speed < car.maxSpeed - 0.1) {
+        car.accelerating = true;
+        car.targetSpeed = targetSpeed;
+      } else {
+        car.accelerating = false;
+        car.targetSpeed = targetSpeed;
+      }
+    }
+
+    // Smooth acceleration
+    if (car.accelerating && car.targetSpeed > car.speed) {
+      car.speed += 30 * dt; // acceleration rate (units/sec^2)
+      if (car.speed > car.targetSpeed) car.speed = car.targetSpeed;
+    } else if (car.speed > car.targetSpeed) {
+      car.speed -= 60 * dt; // decelerate quickly if needed
+      if (car.speed < car.targetSpeed) car.speed = car.targetSpeed;
+    } else {
+      car.speed = car.targetSpeed;
     }
 
     // Move car
