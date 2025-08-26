@@ -43,7 +43,7 @@ function makeCar(road, lane, dir, pos) {
   return {
     road, lane, dir, pos,
     // direction will be set by caller
-    speed: 2.5 + Math.random() * 25,
+    speed: 10 + Math.random() * 25,
     stopped: false,
     waitTimer: 0,
     color: CAR_COLOR,
@@ -244,6 +244,9 @@ function drawCars(ctx, w, h, dt) {
 function updateCars(dt, w, h) {
   // Track which cars are at which stop sign intersection
   // Each car gets a .waitingForStopQueue boolean and .stopQueueKey string
+  // --- Begin: Car queueing and collision avoidance ---
+  // For each car, find the nearest car ahead in the same lane/road/dir
+  const SAFE_DISTANCE = (CAR_LENGTH + 6) / (w > h ? w : h); // in normalized units
   for (let i = 0; i < state.cars.length; i++) {
     const car = state.cars[i];
     // Find if car is approaching an intersection
@@ -270,36 +273,45 @@ function updateCars(dt, w, h) {
         }
       }
     }
+
+    // --- Find nearest car ahead in same lane/road/dir ---
+    let nearestDist = 1.1;
+    let carAhead = null;
+    for (let j = 0; j < state.cars.length; j++) {
+      if (i === j) continue;
+      const other = state.cars[j];
+      if (other.dir !== car.dir || other.road !== car.road || other.lane !== car.lane || other.direction !== car.direction) continue;
+      // Compute normalized distance ahead (wrap around)
+      let d = (other.pos - car.pos) * car.direction;
+      if (d <= 0) d += 1; // wrap
+      if (d < nearestDist) {
+        nearestDist = d;
+        carAhead = other;
+      }
+    }
+
     // Stopping logic
     let shouldStop = false;
     let atStopSign = false;
+    let stopPos = null;
     // If car is in 'clearingIntersection' mode, ignore signals until clear
     if (car.clearingIntersection && nextInter && interDist < 0.04) {
       shouldStop = false;
+      // After clearing intersection, reset stop wait
+      if (interDist < 0.01) {
+        car._stopWait = 0;
+        car.clearingIntersection = false;
+      }
     } else if (nextInter && interDist < 0.04) {
       if (nextInter.type === 'stopSign') {
         atStopSign = true;
-        if (!car.waitingForStopQueue || car.stopQueueKey !== interKey) {
-          car.waitingForStopQueue = true;
-          car.stopQueueKey = interKey;
-          if (!state.stopQueues.has(interKey)) state.stopQueues.set(interKey, []);
-          const queue = state.stopQueues.get(interKey);
-          if (!queue.includes(i)) queue.push(i);
-        }
-        const queue = state.stopQueues.get(interKey);
-        if (queue[0] === i) {
-          if (!car._stopWait) car._stopWait = 0;
+        let interPos = (car.dir === 'h') ? nextInter.x / GRID_SIZE : nextInter.y / GRID_SIZE;
+        if (!car._stopWait) car._stopWait = 0;
+        if (Math.abs(car.pos - interPos) < SAFE_DISTANCE * 0.5) {
           car._stopWait += dt;
           if (car._stopWait > 0.8 + Math.random() * 0.7) {
             shouldStop = false;
-            // Enter clearingIntersection mode
             car.clearingIntersection = true;
-            if (interDist < 0.01) {
-              queue.shift();
-              car.waitingForStopQueue = false;
-              car.stopQueueKey = null;
-              car._stopWait = 0;
-            }
           } else {
             shouldStop = true;
           }
@@ -319,18 +331,37 @@ function updateCars(dt, w, h) {
         car._stopWait = 0;
       }
     } else {
+      // Reset all stop-related state when not at an intersection
       car.waitingForStopQueue = false;
       car.stopQueueKey = null;
       car._stopWait = 0;
       car.clearingIntersection = false;
     }
-    if (shouldStop) {
+
+    // --- Collision avoidance: if car ahead is too close, stop or slow down ---
+    let collisionStop = false;
+    if (carAhead && nearestDist < SAFE_DISTANCE * 1.1) {
+      // If car ahead is stopped, stop; else, slow down
+      if (carAhead.stopped) {
+        collisionStop = true;
+      } else {
+        // Slow down proportionally
+        car._origSpeed = car._origSpeed || car.speed;
+        car.speed = Math.max(4, car._origSpeed * (nearestDist / (SAFE_DISTANCE * 1.1)));
+      }
+    } else {
+      // Restore speed if not blocked
+      if (car._origSpeed) car.speed = car._origSpeed;
+    }
+
+    if (shouldStop || collisionStop) {
       car.stopped = true;
       car.waitTimer += dt;
     } else {
       car.stopped = false;
       car.waitTimer = 0;
     }
+
     // Move car
     if (!car.stopped) {
       let delta = (car.speed * dt) / (car.dir === 'h' ? w : h);
@@ -339,15 +370,19 @@ function updateCars(dt, w, h) {
       if (!car._hasTurned) {
         // Find if car is near the center of any intersection
         let intersectionCenters = [];
+        let intersectionObjs = [];
         for (let j = 0; j < state.intersections.length; j++) {
           const inter = state.intersections[j];
           if (car.dir === 'h' && Math.abs((car.road + 1) - inter.y) < 0.2) {
             intersectionCenters.push(inter.x / GRID_SIZE);
+            intersectionObjs.push(inter);
           } else if (car.dir === 'v' && Math.abs((car.road + 1) - inter.x) < 0.2) {
             intersectionCenters.push(inter.y / GRID_SIZE);
+            intersectionObjs.push(inter);
           }
         }
-        for (let c of intersectionCenters) {
+        for (let idx = 0; idx < intersectionCenters.length; idx++) {
+          let c = intersectionCenters[idx];
           if (Math.abs(car.pos - c) < 0.03) {
             // At intersection center: randomly decide to turn or go straight
             let turn = Math.random();
@@ -361,7 +396,7 @@ function updateCars(dt, w, h) {
                   car.direction = car.direction === 1 ? -1 : 1;
                   car.road = newRoad;
                   car.lane = car.direction === -1 ? 1 : 0;
-                  car.pos = car.direction === 1 ? c : c;
+                  car.pos = intersectionObjs[idx].y / GRID_SIZE; // Always set to intersection center
                   car._hasTurned = true;
                   break;
                 }
@@ -372,7 +407,7 @@ function updateCars(dt, w, h) {
                   car.direction = car.direction === 1 ? -1 : 1;
                   car.road = newRoad;
                   car.lane = car.direction === -1 ? 0 : 1;
-                  car.pos = car.direction === 1 ? c : c;
+                  car.pos = intersectionObjs[idx].x / GRID_SIZE; // Always set to intersection center
                   car._hasTurned = true;
                   break;
                 }
@@ -384,7 +419,7 @@ function updateCars(dt, w, h) {
                   car.dir = 'v';
                   car.road = newRoad;
                   car.lane = car.direction === 1 ? 0 : 1;
-                  car.pos = car.direction === 1 ? c : c;
+                  car.pos = intersectionObjs[idx].y / GRID_SIZE; // Always set to intersection center
                   car._hasTurned = true;
                   break;
                 }
@@ -394,7 +429,7 @@ function updateCars(dt, w, h) {
                   car.dir = 'h';
                   car.road = newRoad;
                   car.lane = car.direction === 1 ? 1 : 0;
-                  car.pos = car.direction === 1 ? c : c;
+                  car.pos = intersectionObjs[idx].x / GRID_SIZE; // Always set to intersection center
                   car._hasTurned = true;
                   break;
                 }
@@ -417,11 +452,12 @@ function updateCars(dt, w, h) {
         }
       }
       if (farFromAll) car._hasTurned = false;
-  // Wrap position if needed
-  if (car.direction === 1 && car.pos > 1) car.pos = 0;
-  if (car.direction === -1 && car.pos < 0) car.pos = 1;
+      // Wrap position if needed
+      if (car.direction === 1 && car.pos > 1) car.pos = 0;
+      if (car.direction === -1 && car.pos < 0) car.pos = 1;
     }
   }
+  // --- End: Car queueing and collision avoidance ---
 }
 
 function updateIntersections(dt) {
