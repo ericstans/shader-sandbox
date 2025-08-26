@@ -187,6 +187,10 @@ export function onChangedAway() {
 }
 
 function animate(ctx, t, width, height) {
+  // --- Gyroscope debug values ---
+  if (typeof window._rainstickGyro === 'undefined') {
+    window._rainstickGyro = { alpha: 0, beta: 0, gamma: 0 };
+  }
   if (!state || ctx._rainstickW !== width || ctx._rainstickH !== height) {
     reset();
     ctx._rainstickW = width;
@@ -384,7 +388,7 @@ function animate(ctx, t, width, height) {
 
 
 
-  // Handle mouse drag for rotation
+  // Handle mouse drag for rotation (desktop) and device orientation (mobile)
   if (!window._rainstickEvents) {
     window._rainstickEvents = true;
     ctx.canvas.addEventListener('mousedown', e => {
@@ -402,6 +406,33 @@ function animate(ctx, t, width, height) {
     window.addEventListener('mouseup', e => {
       state.dragging = false;
     });
+
+    // Device orientation (gyroscope) for mobile
+    function handleOrientation(event) {
+      // Save for debug display
+      window._rainstickGyro = {
+        alpha: event.alpha,
+        beta: event.beta,
+        gamma: event.gamma
+      };
+      // Use gamma (left-right tilt) for landscape, beta (front-back tilt) for portrait
+      let isPortrait = window.innerHeight > window.innerWidth;
+      let angleDeg = isPortrait ? event.gamma : event.beta;
+      // Clamp and convert to radians
+      if (typeof angleDeg === 'number') {
+        // gamma: -90 (left) to 90 (right), beta: -180 (up) to 180 (down)
+        // We'll map -90..90 to -pi/2..pi/2 for gamma, or -pi/2..pi/2 for beta
+        let max = isPortrait ? 90 : 90;
+        let min = isPortrait ? -90 : -90;
+        let clamped = Math.max(min, Math.min(max, angleDeg));
+        let rad = clamped * Math.PI / 180;
+        // Optionally add offset for natural vertical
+        state.angle = rad;
+      }
+    }
+    if (window.DeviceOrientationEvent) {
+      window.addEventListener('deviceorientation', handleOrientation, true);
+    }
   }
 
   // Physics for pebbles (run at half rate)
@@ -601,6 +632,17 @@ function animate(ctx, t, width, height) {
     ctx.strokeStyle = '#888';
     ctx.stroke();
   }
+
+  // Draw gyroscope debug info (top left corner)
+  ctx.save();
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.font = '16px monospace';
+  ctx.fillStyle = 'yellow';
+  let gyro = window._rainstickGyro || { alpha: 0, beta: 0, gamma: 0 };
+  ctx.fillText(`Gyro α: ${gyro.alpha !== undefined ? gyro.alpha.toFixed(1) : 'n/a'}`, 270, 24);
+  ctx.fillText(`Gyro β: ${gyro.beta !== undefined ? gyro.beta.toFixed(1) : 'n/a'}`, 270, 44);
+  ctx.fillText(`Gyro γ: ${gyro.gamma !== undefined ? gyro.gamma.toFixed(1) : 'n/a'}`, 270, 64);
+  ctx.restore();
   // Keep UI in sync with canvas position
   if (uiElements && uiElements.slider) {
     const rect = ctx.canvas.getBoundingClientRect();
