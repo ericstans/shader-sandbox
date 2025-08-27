@@ -973,19 +973,38 @@ function animate(ctx, t, width, height) {
                 }
             } else if (f.behaviorTimer <= 0) {
                 // Pick a new behavior
-                let behaviors = ['float', 'swim', 'explore', 'lookForFood'];
+                let canEatPellets = foodPellets.some(p => !p.eaten);
+                let isSturgeon = f.species && f.species.name === 'Sturgeon';
+                let canEatFish = isSturgeon && fish.some(other => other !== f && other.species && other.species.name !== 'Sturgeon');
+                let behaviors = ['float', 'swim', 'explore'];
+                if ((canEatPellets) || canEatFish) {
+                    behaviors.push('lookForFood');
+                }
                 let next = behaviors[Math.floor(Math.random() * behaviors.length)];
                 f.behavior = next;
-                if (next === 'lookForFood' && foodPellets.some(p => !p.eaten)) {
-                    // Target nearest pellet
-                    let nearest = null, minDist = 1e9;
-                    for (let pellet of foodPellets) {
-                        if (pellet.eaten) continue;
-                        let dx = pellet.x - f.x, dy = pellet.y - f.y;
-                        let dist = dx*dx + dy*dy;
-                        if (dist < minDist) { minDist = dist; nearest = pellet; }
+                if (next === 'lookForFood') {
+                    if (canEatPellets) {
+                        // Target nearest pellet
+                        let nearest = null, minDist = 1e9;
+                        for (let pellet of foodPellets) {
+                            if (pellet.eaten) continue;
+                            let dx = pellet.x - f.x, dy = pellet.y - f.y;
+                            let dist = dx*dx + dy*dy;
+                            if (dist < minDist) { minDist = dist; nearest = pellet; }
+                        }
+                        if (nearest) f.target = { pellet: nearest };
+                    } else if (canEatFish) {
+                        // Sturgeon: target nearest non-sturgeon fish
+                        let nearest = null, minDist = 1e9;
+                        for (let other of fish) {
+                            if (other === f) continue;
+                            if (!other.species || other.species.name === 'Sturgeon') continue;
+                            let dx = other.x - f.x, dy = other.y - f.y;
+                            let dist = dx*dx + dy*dy;
+                            if (dist < minDist) { minDist = dist; nearest = other; }
+                        }
+                        if (nearest) f.target = { fish: nearest };
                     }
-                    if (nearest) f.target = { pellet: nearest };
                 }
                 if (next === 'float') {
                     f.behaviorTimer = 30 + Math.random() * 1200;
@@ -1000,7 +1019,7 @@ function animate(ctx, t, width, height) {
                         x: WALL_WIDTH + f.size * 0.7 + Math.random() * (width - 2 * WALL_WIDTH - f.size * 1.4),
                         y: WALL_WIDTH + f.size * 0.5 + Math.random() * (height - 2 * WALL_WIDTH - f.size)
                     };
-                } else {
+                } else if (next !== 'lookForFood') {
                     f.target = null;
                 }
             }
