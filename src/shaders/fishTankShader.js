@@ -15,31 +15,33 @@ import { updateFishBehavior } from './fishtank/fishBehavior.js'
 
 const displayName = 'Fish Tank';
 
-// state variables
-let fish = [];
-let netEvent = null;
-let eggs = [];
-let bubbles = [];
-let tankDecor = null;
-let foodPellets = [];
-let lilyPads = [];
-let isNight = false;
-let lastDayNightSwitch = 0;
-let transitioning = false;
-let transitionStart = 0;
-let transitionFromNight = false;
+// Encapsulated state object
+const state = {
+    fish: [],
+    netEvent: null,
+    eggs: [],
+    bubbles: [],
+    tankDecor: null,
+    foodPellets: [],
+    lilyPads: [],
+    isNight: false,
+    lastDayNightSwitch: 0,
+    transitioning: false,
+    transitionStart: 0,
+    transitionFromNight: false
+};
 
 // Add a food pellet at (x, y)
 function addFoodPellet(x, y) {
-    addFoodPelletUtil(foodPellets, x, y);
+    addFoodPelletUtil(state.foodPellets, x, y);
     // 25% chance for each fish to switch to 'lookForFood' and target nearest pellet
-    for (let f of fish) {
-        if (Math.random() < 0.25 && foodPellets.some(p => !p.eaten)) {
+    for (let f of state.fish) {
+        if (Math.random() < 0.25 && state.foodPellets.some(p => !p.eaten)) {
             f.behavior = 'lookForFood';
             f.behaviorTimer = 60 + Math.random() * 1200;
             // Target nearest uneaten pellet
             let minDist = Infinity, targetPellet = null;
-            for (let pellet of foodPellets) {
+            for (let pellet of state.foodPellets) {
                 if (pellet.eaten) continue;
                 let dx = pellet.x - f.x;
                 let dy = pellet.y - f.y;
@@ -71,14 +73,14 @@ function onClick(e, { canvas, ctx, width, height }) {
     if (x > WALL_WIDTH && x < width-WALL_WIDTH && y > WALL_WIDTH && y < height-WALL_WIDTH) {
         if (e.ctrlKey) {
             // Ctrl-click: start a net event
-            if (!netEvent) {
+            if (!state.netEvent) {
                 startNetEvent(width, height);
             }
         } else if (e.shiftKey) {
             // Add a fish at this location (random species)
             if (typeof resetFish === 'function') {
                 let species = speciesList[Math.floor(Math.random()*speciesList.length)];
-                fish.push({
+                state.fish.push({
                     x: x,
                     y: y,
                     vx: (Math.random()*0.5+0.3) * (Math.random()<0.5?-1:1),
@@ -99,7 +101,7 @@ function onClick(e, { canvas, ctx, width, height }) {
 }
 
 function resetFish(width, height) {
-    fish = [];
+    state.fish = [];
     const n = 6 + Math.floor(Math.random() * 4);
     for (let i = 0; i < n; i++) {
         let dir = Math.random() < 0.5 ? 1 : -1;
@@ -108,7 +110,7 @@ function resetFish(width, height) {
         let behaviors = ['float', 'swim', 'explore', 'lookForFood', 'sleep'];
         let behavior = behaviors[Math.floor(Math.random() * (behaviors.length - 1))]; // don't start as sleep
         let species = speciesList[Math.floor(Math.random() * speciesList.length)];
-        fish.push({
+        state.fish.push({
             x: Math.random() * width,
             y: Math.random() * height * 0.7 + height * 0.15,
             vx: vx,
@@ -126,9 +128,9 @@ function resetFish(width, height) {
 }
 
 function resetBubbles(width, height) {
-    bubbles = [];
+    state.bubbles = [];
     for (let i = 0; i < 12; i++) {
-        bubbles.push({
+        state.bubbles.push({
             x: Math.random() * width,
             y: Math.random() * height,
             r: 3 + Math.random() * 4,
@@ -139,19 +141,19 @@ function resetBubbles(width, height) {
 
 // Start a new net event at a random position
 function startNetEvent(width, height) {
-    netEvent = startNetEventUtil(width, height);
+    state.netEvent = startNetEventUtil(width, height);
 }
 
 
 function animate(ctx, t, width, height) {
     // At night, put all fish to sleep; during day, wake them up
-    if (typeof isNight !== 'undefined') {
-        for (let f of fish) {
+    if (typeof state.isNight !== 'undefined') {
+        for (let f of state.fish) {
             if (f.sleeper) {
-                if (isNight && f.behavior !== 'sleep') {
+                if (state.isNight && f.behavior !== 'sleep') {
                     f.behavior = 'sleep';
                     f.behaviorTimer = 999999; // stay asleep all night
-                } else if (!isNight && f.behavior === 'sleep') {
+                } else if (!state.isNight && f.behavior === 'sleep') {
                     // Wake up: pick a random behavior
                     let behaviors = ['float', 'swim', 'explore', 'lookForFood'];
                     let next = behaviors[Math.floor(Math.random() * behaviors.length)];
@@ -165,17 +167,17 @@ function animate(ctx, t, width, height) {
     let now = performance.now();
     // Handle day/night switching and transition
     let transitionT = 0;
-    if (!transitioning && now - lastDayNightSwitch > DAY_LENGTH_MS) {
-        transitioning = true;
-        transitionStart = now;
-        transitionFromNight = isNight;
-        lastDayNightSwitch = now;
+    if (!state.transitioning && now - state.lastDayNightSwitch > DAY_LENGTH_MS) {
+        state.transitioning = true;
+        state.transitionStart = now;
+        state.transitionFromNight = state.isNight;
+        state.lastDayNightSwitch = now;
     }
-    if (transitioning) {
-        transitionT = Math.min(1, (now - transitionStart) / TRANSITION_MS);
+    if (state.transitioning) {
+        transitionT = Math.min(1, (now - state.transitionStart) / TRANSITION_MS);
         if (transitionT >= 1) {
-            isNight = !isNight;
-            transitioning = false;
+            state.isNight = !state.isNight;
+            state.transitioning = false;
         }
     }
     ctx.save();
@@ -185,12 +187,12 @@ function animate(ctx, t, width, height) {
     const dayTop = '#5ec6e6', dayBottom = '#0a2a3a';
     const nightTop = '#438da3ff', nightBottom = '#0a2a3a';
     let grad = ctx.createLinearGradient(0, 0, 0, height - WALL_WIDTH);
-    if (transitioning) {
+    if (state.transitioning) {
         // Crossfade between gradients
-        let fromTop = transitionFromNight ? nightTop : dayTop;
-        let fromBottom = transitionFromNight ? nightBottom : dayBottom;
-        let toTop = transitionFromNight ? dayTop : nightTop;
-        let toBottom = transitionFromNight ? dayBottom : nightBottom;
+        let fromTop = state.transitionFromNight ? nightTop : dayTop;
+        let fromBottom = state.transitionFromNight ? nightBottom : dayBottom;
+        let toTop = state.transitionFromNight ? dayTop : nightTop;
+        let toBottom = state.transitionFromNight ? dayBottom : nightBottom;
         // Interpolate colors
         function lerpColor(a, b, t) {
             // a, b: hex strings '#rrggbb'
@@ -205,7 +207,7 @@ function animate(ctx, t, width, height) {
         }
         grad.addColorStop(0, lerpColor(fromTop, toTop, transitionT));
         grad.addColorStop(1, lerpColor(fromBottom, toBottom, transitionT));
-    } else if (isNight) {
+    } else if (state.isNight) {
         grad.addColorStop(0, nightTop);
         grad.addColorStop(1, nightBottom);
     } else {
@@ -215,7 +217,7 @@ function animate(ctx, t, width, height) {
     ctx.fillStyle = grad;
     ctx.fillRect(WALL_WIDTH, 0, width - 2 * WALL_WIDTH, height - WALL_WIDTH);
     // Lily pad spawning logic
-    lilyPads = spawnLilyPads(lilyPads, width, WALL_WIDTH);
+    state.lilyPads = spawnLilyPads(state.lilyPads, width, WALL_WIDTH);
 
     let surfaceH = 50;
     // Fill above the highest wavy line with black
@@ -268,11 +270,11 @@ function animate(ctx, t, width, height) {
     ctx.restore();
 
     // Draw tank floor decorations (static, cached)
-    if (!tankDecor) {
-        tankDecor = generateTankDecor(width, height, WALL_WIDTH);
+    if (!state.tankDecor) {
+        state.tankDecor = generateTankDecor(width, height, WALL_WIDTH);
     }
     // --- Continuous gravel surface (band, static) ---
-    for (let gb of tankDecor.gravelBand) {
+    for (let gb of state.tankDecor.gravelBand) {
         ctx.save();
         ctx.beginPath();
         ctx.ellipse(gb.x, gb.y, gb.rx, gb.ry, 0, 0, Math.PI * 2);
@@ -282,7 +284,7 @@ function animate(ctx, t, width, height) {
         ctx.restore();
     }
     // --- Individual gravel ---
-    for (let g of tankDecor.gravel) {
+    for (let g of state.tankDecor.gravel) {
         ctx.save();
         ctx.beginPath();
         ctx.arc(g.x, g.y, g.r, 0, Math.PI * 2);
@@ -292,16 +294,16 @@ function animate(ctx, t, width, height) {
         ctx.restore();
     }
     // Plants
-    drawPlants(ctx, tankDecor.plants, t);
+    drawPlants(ctx, state.tankDecor.plants, t);
     // Rocks
-    drawRocks(ctx, tankDecor.rocks);
-    foodPellets = foodPellets.filter(p => !p.eaten);
+    drawRocks(ctx, state.tankDecor.rocks);
+    state.foodPellets = state.foodPellets.filter(p => !p.eaten);
     // Draw and update food pellets
-    drawFoodPellets(ctx, foodPellets, t, SURFACE_HEIGHT);
+    drawFoodPellets(ctx, state.foodPellets, t, SURFACE_HEIGHT);
     // Caustics
     drawCaustics(ctx, width, height, t);
     // Bubbles
-    drawBubbles(ctx, bubbles, t, width, height);
+    drawBubbles(ctx, state.bubbles, t, width, height);
     // Fish
     // Clamp fish to new bounds if canvas size changed
     if (ctx._fishW !== width || ctx._fishH !== height) {
@@ -309,43 +311,43 @@ function animate(ctx, t, width, height) {
         const maxX = width - WALL_WIDTH;
         const minY = WALL_WIDTH;
         const maxY = height - WALL_WIDTH;
-        for (let f of fish) {
+        for (let f of state.fish) {
             f.x = Math.max(minX, Math.min(maxX, f.x));
             f.y = Math.max(minY, Math.min(maxY, f.y));
         }
         ctx._fishW = width;
         ctx._fishH = height;
     }
-    if (!fish.length) {
+    if (!state.fish.length) {
         resetFish(width, height);
         resetBubbles(width, height);
     }
     // Track indices of fish to remove (eaten)
     let fishToRemove = new Set();
-    updateFishBehavior(fish, fishToRemove, eggs, foodPellets, width, height, ctx, t);
+    updateFishBehavior(state.fish, fishToRemove, state.eggs, state.foodPellets, width, height, ctx, t);
 
     // Remove eaten fish (except sturgeons)
     if (fishToRemove.size > 0) {
-        fish = fish.filter((f, idx) => !fishToRemove.has(idx));
+        state.fish = state.fish.filter((f, idx) => !fishToRemove.has(idx));
     }
 
     // Rare random event: cartoon net on a pole swings in from the top
-    if (!netEvent && Math.random() < NET_PROBABILITY) {
+    if (!state.netEvent && Math.random() < NET_PROBABILITY) {
         startNetEvent(width, height);
     }
-    if (netEvent) {
-        drawNetEvent(ctx, netEvent, fish, NET_SPEED);
+    if (state.netEvent) {
+        drawNetEvent(ctx, state.netEvent, state.fish, NET_SPEED);
         // End event after swing
-        if (netEvent.t >= 1000) {
-            netEvent = null;
+        if (state.netEvent.t >= 1000) {
+            state.netEvent = null;
         }
         // Remove fish 1000ms after being scooped
         const now = performance.now();
-        fish = fish.filter(f => !(f.scoopedByNet && f.scoopedTime && now - f.scoopedTime > 1000));
+        state.fish = state.fish.filter(f => !(f.scoopedByNet && f.scoopedTime && now - f.scoopedTime > 1000));
     }
 
     // Draw lily pads (float at top)
-    drawLilyPads(ctx, lilyPads, t);
+    drawLilyPads(ctx, state.lilyPads, t);
 
     // Draw tank walls
     ctx.save();
@@ -360,7 +362,7 @@ function animate(ctx, t, width, height) {
 
 function onResize({ canvas, ctx, width, height }) {
     console.log('onResize')
-    tankDecor = null;
+    state.tankDecor = null;
 }
 
 
