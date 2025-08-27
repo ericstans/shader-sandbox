@@ -1,6 +1,8 @@
 // Draw a single fish on the canvas
 // Exports: drawFish(ctx, f, t)
 
+import { FISH_SHOW_BEHAVIOR_LABELS } from './constants.js';
+
 /**
  * Draw a fish on the canvas context.
  * @param {CanvasRenderingContext2D} ctx
@@ -11,8 +13,7 @@ export function drawFish(ctx, f, t) {
     ctx.save();
     ctx.translate(f.x, f.y);
 
-    // Draw behavior label BEFORE flipping, so text is always readable
-    if (typeof f.behavior === 'string' && f.behavior) {
+    if (FISH_SHOW_BEHAVIOR_LABELS && typeof f.behavior === 'string' && f.behavior) {
         ctx.save();
         ctx.font = `${Math.max(12, Math.round(f.size * 1.2))}px sans-serif`;
         ctx.textAlign = 'center';
