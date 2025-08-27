@@ -10,7 +10,7 @@ import {
     NET_SPEED,
     MAX_LILY_PADS,
     LILY_PAD_SPAWN_CHANCE
-} from './fishtank/constants.js';
+} from './fishTank/constants.js';
 
 const displayName = 'Fish Tank';
 // Day/Night cycle state
