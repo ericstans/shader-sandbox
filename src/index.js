@@ -434,6 +434,13 @@ if (select) {
 	}
 	select.selectedIndex = initialIndex;
 	currentShader = select.selectedIndex;
+	// Set document title to shader name
+	if (shaders[currentShader]) {
+		let shaderObj = shaders[currentShader];
+		let name = shaderObj.displayName || (shaderObj.shader && shaderObj.shader.displayName) || '';
+		if (name) document.title = name;
+		else document.title = 'Shader Sandbox';
+	}
 	// On load, initialize state for the active shader
 	if (shaders[currentShader] && shaders[currentShader].shader && shaders[currentShader].shader.onResize) {
 		shaders[currentShader].shader.onResize({ canvas, ctx, width, height });
@@ -485,6 +492,9 @@ if (select) {
 		let normalized = name.toLowerCase().replace(/\s+/g, '');
 		url.searchParams.set('shader', normalized);
 		window.history.replaceState({}, '', url);
+		// Update document title
+		if (name) document.title = name;
+		else document.title = 'Shader Sandbox';
 	});
 }
 
