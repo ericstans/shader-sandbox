@@ -1,4 +1,3 @@
-
 import {
     WALL_WIDTH,
     SURFACE_HEIGHT,
@@ -10,7 +9,9 @@ import {
     NET_SPEED,
     MAX_LILY_PADS,
     LILY_PAD_SPAWN_CHANCE
-} from './fishTank/constants.js';
+} from './fishtank/constants.js';
+import { drawPlants, drawRocks, drawCaustics, drawBubbles } from './fishtank/tankEnvironment.js';
+import { addFoodPellet as addFoodPelletUtil, drawFoodPellets } from './fishtank/foodPellets.js';
 
 const displayName = 'Fish Tank';
 // Day/Night cycle state
@@ -120,13 +121,7 @@ function generateTankDecor(width, height, WALL_WIDTH) {
 }
 
 function addFoodPellet(x, y) {
-    foodPellets.push({
-        x,
-        y,
-        r: 5 + Math.random() * 3,
-        vy: - 0.35 + Math.random() * 0.18, // floating speed
-        eaten: false
-    });
+    addFoodPelletUtil(foodPellets, x, y);
     // 25% chance for each fish to switch to 'lookForFood' and target nearest pellet
     for (let f of fish) {
         if (Math.random() < 0.25 && foodPellets.some(p => !p.eaten)) {
@@ -538,25 +533,6 @@ function drawFish(ctx, f, t) {
     ctx.restore();
 }
 
-function drawCaustics(ctx, width, height, t) {
-    ctx.save();
-    ctx.globalAlpha = 0.13;
-    for (let i = 0; i < 18; i++) {
-        let phase = t * 0.12 + i * 0.7;
-        let amp = 18 + Math.sin(phase * 1.2 + i) * 8;
-        let y = (height / 18) * i + Math.sin(phase) * 8;
-        ctx.beginPath();
-        for (let x = 0; x <= width; x += 4) {
-            let yoff = Math.sin(phase + x * 0.03 + Math.sin(x * 0.01 + phase) * 0.7) * amp * 0.08;
-            ctx.lineTo(x, y + yoff);
-        }
-        ctx.strokeStyle = `rgba(180,220,255,0.18)`;
-        ctx.lineWidth = 2.2 + Math.sin(phase * 1.3) * 0.7;
-        ctx.stroke();
-    }
-    ctx.restore();
-}
-
 function animate(ctx, t, width, height) {
     // At night, put all fish to sleep; during day, wake them up
     if (typeof isNight !== 'undefined') {
@@ -805,19 +781,7 @@ function animate(ctx, t, width, height) {
         ctx.restore();
     }
     // Plants
-    for (let p of tankDecor.plants) {
-        ctx.save();
-        ctx.beginPath();
-        ctx.moveTo(p.x, p.baseY);
-        // Make plant movement more noticeable: increase amplitude and frequency
-        let sway = Math.sin(t * 1.3 + p.x * 0.06) * 5;
-        ctx.bezierCurveTo(p.x + sway, p.baseY - p.h * 0.3, p.x - sway * 0.5, p.baseY - p.h * 0.7, p.x + sway * 0.2, p.baseY - p.h);
-        ctx.strokeStyle = p.color;
-        ctx.lineWidth = p.lw;
-        ctx.globalAlpha = 0.7;
-        ctx.stroke();
-        ctx.restore();
-    }
+    drawPlants(ctx, tankDecor.plants, t);
     if (!fish.length) {
         resetFish(width, height);
         resetBubbles(width, height);
@@ -836,59 +800,14 @@ function animate(ctx, t, width, height) {
         ctx._fishH = height;
     }
     // Rocks
-    for (let r of tankDecor.rocks) {
-        ctx.save();
-        ctx.beginPath();
-        ctx.ellipse(r.x, r.y, r.rx, r.ry, r.rot, 0, Math.PI * 2);
-        ctx.fillStyle = r.color;
-        ctx.globalAlpha = r.alpha;
-        ctx.shadowColor = '#222';
-        ctx.shadowBlur = 6;
-        ctx.fill();
-        ctx.restore();
-    }
+    drawRocks(ctx, tankDecor.rocks);
     foodPellets = foodPellets.filter(p => !p.eaten);
     // Draw and update food pellets
-    if (foodPellets.length > 0) console.log('foodPellets:', foodPellets.length);
-    for (let pellet of foodPellets) {
-        if (pellet.eaten) continue;
-        ctx.save();
-        ctx.globalAlpha = 0.85;
-        ctx.beginPath();
-        ctx.arc(pellet.x, pellet.y, pellet.r, 0, Math.PI * 2);
-        ctx.fillStyle = '#c49a6c';
-        ctx.shadowColor = '#7a5a2b';
-        ctx.shadowBlur = 4;
-        ctx.fill();
-        ctx.restore();
-        // Pellet floats up
-        pellet.y += pellet.vy;
-        // Stop at surface below top of tank
-        const stopY = SURFACE_HEIGHT + 10 + pellet.r;
-        if (pellet.y < stopY) {
-            pellet.y = stopY;
-            pellet.vy = 0;
-        }
-    }
+    drawFoodPellets(ctx, foodPellets, t, SURFACE_HEIGHT);
     // Caustics
     drawCaustics(ctx, width, height, t);
     // Bubbles
-    for (let b of bubbles) {
-        ctx.save();
-        ctx.globalAlpha = 0.18 + Math.sin(t * 0.7 + b.x * 0.01 + b.y * 0.01) * 0.12;
-        ctx.beginPath();
-        ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
-        ctx.fillStyle = '#fff';
-        ctx.fill();
-        ctx.restore();
-        b.y -= b.vy;
-        if (b.y < -b.r) {
-            b.x = Math.random() * width;
-            b.y = height + b.r + Math.random() * 20;
-            b.r = 3 + Math.random() * 4;
-            b.vy = 0.5 + Math.random() * 0.7;
-        }
-    }
+    drawBubbles(ctx, bubbles, t, width, height);
     // Fish
     // Track indices of fish to remove (eaten)
     let fishToRemove = new Set();

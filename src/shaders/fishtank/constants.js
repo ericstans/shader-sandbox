@@ -11,7 +11,6 @@ export const NET_SPEED = 1 / 30000;
 export const MAX_LILY_PADS = 8;
 export const LILY_PAD_SPAWN_CHANCE = 1 / 3000; // chance per frame
 
-
 // Utility: clamp a value between min and max
 export function clamp(val, min, max) {
     return Math.max(min, Math.min(max, val));
