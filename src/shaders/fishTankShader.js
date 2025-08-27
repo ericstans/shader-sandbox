@@ -10,8 +10,8 @@ import {
     MAX_LILY_PADS,
     LILY_PAD_SPAWN_CHANCE
 } from './fishtank/constants.js';
-import { drawPlants, drawRocks, drawCaustics, drawBubbles } from './fishtank/tankEnvironment.js';
-import { addFoodPellet as addFoodPelletUtil, drawFoodPellets } from './fishtank/foodPellets.js';
+import { drawPlants, drawRocks, drawCaustics, drawBubbles, generateTankDecor } from './fishtank/tankEnvironment.js';
+import { addFoodPelletUtil, drawFoodPellets } from './fishtank/foodPellets.js';
 
 const displayName = 'Fish Tank';
 // Day/Night cycle state
@@ -29,97 +29,9 @@ let transitioning = false;
 let transitionStart = 0;
 let transitionFromNight = false;
 
-// Start a new net event at a random position
-function startNetEvent(width, height) {
-    let pivotX = Math.random() * (width * 0.7) + width * 0.15;
-    let netRadius = 60 + Math.random() * 40;
-    let pivotY = -height * 0.5 - 60;
-    // Ensure pole (minus the net diameter) is long enough to reach the top of the canvas
-    // The pole must reach from pivotY to y=0, minus the net's diameter (2*netRadius)
-    let minPoleLen = Math.abs(pivotY) - 2 * netRadius;
-    minPoleLen = Math.max(minPoleLen, 0); // Clamp to non-negative
-    let poleLen = minPoleLen + Math.random() * (height * 0.5);
-    let netAngleStart = 0;
-    let netAngleEnd = 180;
-    let swingDir = Math.random() < 0.5 ? 1 : -1;
-    netEvent = {
-        pivotX,
-        pivotY,
-        poleLen,
-        netRadius,
-        t: 0,
-        swingDir,
-        netAngleStart,
-        netAngleEnd,
-        scooped: false
-    };
-}
+
 
 // Add a food pellet at (x, y)
-// Generate static decorations for the tank floor
-function generateTankDecor(width, height, WALL_WIDTH) {
-    // Generate static decorations for the tank floor
-    // --- Continuous gravel band (static, cached) ---
-    let gravelBand = [];
-    let gravelBandY = height - WALL_WIDTH - 10;
-    let bandHeight = 18 * 2;
-    let bandCount = Math.floor((width - 2 * WALL_WIDTH) / 7);
-    for (let i = 0; i < bandCount; i++) {
-        let gx = WALL_WIDTH + 3 + i * 7 + Math.random() * 2;
-        let gy = gravelBandY + Math.random() * bandHeight;
-        gy = Math.min(gy, height - WALL_WIDTH - 2); // Clamp to bottom
-        let gr = (3.5 + Math.random() * 2.5) * 2;
-        gravelBand.push({
-            x: gx,
-            y: gy,
-            rx: gr,
-            ry: gr * (0.7 + Math.random() * 0.3),
-            color: `hsl(${35 + Math.random() * 30},${40 + Math.random() * 30}%,${60 + Math.random() * 20}%)`,
-            alpha: 0.38 + Math.random() * 0.18
-        });
-    }
-    // Individual gravel
-    let gravel = [];
-    for (let i = 0; i < 60; i++) {
-        let gy = height - WALL_WIDTH - 8 - Math.random() * 8 * 2;
-        gy = Math.min(gy, height - WALL_WIDTH - 2); // Clamp to bottom
-        gravel.push({
-            x: 20 + Math.random() * (width - 40),
-            y: gy,
-            r: (2.2 + Math.random() * 1.8) * 2,
-            color: `hsl(${35 + Math.random() * 30},${40 + Math.random() * 30}%,${60 + Math.random() * 20}%)`,
-            alpha: 0.45 + Math.random() * 0.25
-        });
-    }
-    let rocks = [];
-    for (let i = 0; i < 5; i++) {
-        let ry = height - WALL_WIDTH - 12 - Math.random() * 10 * 2;
-        ry = Math.min(ry, height - WALL_WIDTH - 2); // Clamp to bottom
-        rocks.push({
-            x: 30 + Math.random() * (width - 60),
-            y: ry,
-            rx: (12 + Math.random() * 10) * 2,
-            ry: (7 + Math.random() * 6) * 2,
-            rot: Math.random() * Math.PI,
-            color: `hsl(${180 + Math.random() * 60},${10 + Math.random() * 20}%,${30 + Math.random() * 20}%)`,
-            alpha: 0.7
-        });
-    }
-    let plants = [];
-    for (let i = 0; i < (5 + Math.random() * 10); i++) {
-        let baseY = height - WALL_WIDTH - 10;
-        baseY = Math.min(baseY, height - WALL_WIDTH - 2); // Clamp to bottom
-        plants.push({
-            x: 25 + Math.random() * (width - 50),
-            baseY: baseY,
-            h: (28 + Math.random() * 200) * 2,
-            color: `hsl(${90 + Math.random() * 60},${40 + Math.random() * 40}%,${30 + Math.random() * 30}%)`,
-            lw: (2 + Math.random() * 3) * 2
-        });
-    }
-    return { gravelBand, gravel, rocks, plants };
-}
-
 function addFoodPellet(x, y) {
     addFoodPelletUtil(foodPellets, x, y);
     // 25% chance for each fish to switch to 'lookForFood' and target nearest pellet
@@ -355,6 +267,32 @@ function resetBubbles(width, height) {
             vy: 0.5 + Math.random() * 0.7
         });
     }
+}
+
+// Start a new net event at a random position
+function startNetEvent(width, height) {
+    let pivotX = Math.random() * (width * 0.7) + width * 0.15;
+    let netRadius = 60 + Math.random() * 40;
+    let pivotY = -height * 0.5 - 60;
+    // Ensure pole (minus the net diameter) is long enough to reach the top of the canvas
+    // The pole must reach from pivotY to y=0, minus the net's diameter (2*netRadius)
+    let minPoleLen = Math.abs(pivotY) - 2 * netRadius;
+    minPoleLen = Math.max(minPoleLen, 0); // Clamp to non-negative
+    let poleLen = minPoleLen + Math.random() * (height * 0.5);
+    let netAngleStart = 0;
+    let netAngleEnd = 180;
+    let swingDir = Math.random() < 0.5 ? 1 : -1;
+    netEvent = {
+        pivotX,
+        pivotY,
+        poleLen,
+        netRadius,
+        t: 0,
+        swingDir,
+        netAngleStart,
+        netAngleEnd,
+        scooped: false
+    };
 }
 
 function drawFish(ctx, f, t) {
@@ -675,87 +613,6 @@ function animate(ctx, t, width, height) {
     ctx.restore();
     ctx.restore();
 
-    // Rare random event: cartoon net on a pole swings in from the top
-    if (!netEvent && Math.random() < NET_PROBABILITY) {
-        startNetEvent(width, height);
-    }
-    if (netEvent) {
-        // Animate net swinging down
-        netEvent.t++;
-        let swingT = Math.min(1, netEvent.t * NET_SPEED);
-        let angle = netEvent.netAngleStart + (netEvent.netAngleEnd - netEvent.netAngleStart) * swingT * netEvent.swingDir;
-        // Net position at end of pole
-        let netX = netEvent.pivotX + Math.cos(angle) * netEvent.poleLen;
-        let netY = netEvent.pivotY + Math.sin(angle) * netEvent.poleLen;
-        // Draw pole
-        ctx.save();
-        ctx.globalAlpha = 0.8;
-        ctx.strokeStyle = '#a88';
-        ctx.lineWidth = 10;
-        ctx.beginPath();
-        ctx.moveTo(netEvent.pivotX, netEvent.pivotY);
-        ctx.lineTo(netX, netY);
-        ctx.stroke();
-        // Draw net hoop
-        ctx.save();
-        ctx.translate(netX, netY);
-        ctx.rotate(angle + Math.PI / 2);
-        ctx.strokeStyle = '#b8b8b8';
-        ctx.lineWidth = 4;
-        ctx.beginPath();
-        ctx.ellipse(0, 0, netEvent.netRadius, netEvent.netRadius * 2, 0, 0, Math.PI * 2);
-        ctx.stroke();
-        // Draw net mesh
-        ctx.setLineDash([8, 8]);
-        ctx.lineWidth = 1.2;
-        ctx.beginPath();
-        for (let i = 0; i < 8; i++) {
-            let meshAngle = (Math.PI * 2 / 8) * i;
-            ctx.moveTo(0, 0);
-            ctx.lineTo(Math.cos(meshAngle) * netEvent.netRadius, Math.sin(meshAngle) * netEvent.netRadius * 0.85);
-        }
-        ctx.strokeStyle = '#b8b8b8';
-        ctx.stroke();
-        ctx.setLineDash([]);
-        ctx.restore();
-        ctx.restore();
-
-        // Mark fish inside net ellipse as scooped and attach to net, but do not remove from fish array
-        const now = performance.now();
-        for (let f of fish) {
-            if (f.scoopedByNet) {
-                // Already scooped, update position to follow net
-                f.x = netX + (Math.random() - 0.5) * netEvent.netRadius * 0.7;
-                f.y = netY + (Math.random() - 0.5) * netEvent.netRadius * 1.5;
-                // If not already set, mark the time scooped
-                if (!f.scoopedTime) f.scoopedTime = now;
-                continue;
-            }
-            // Transform fish position into net's local ellipse space
-            let dx = f.x - netX;
-            let dy = f.y - netY;
-            let localX = Math.cos(-angle - Math.PI / 2) * dx - Math.sin(-angle - Math.PI / 2) * dy;
-            let localY = Math.sin(-angle - Math.PI / 2) * dx + Math.cos(-angle - Math.PI / 2) * dy;
-            // Ellipse: (x/a)^2 + (y/b)^2 < 1
-            let a = netEvent.netRadius;
-            let b = netEvent.netRadius * 2;
-            let inNet = (localX * localX) / (a * a) + (localY * localY) / (b * b) < 1;
-            if (inNet) {
-                f.scoopedByNet = true;
-                f.scoopedTime = now;
-                f.x = netX + (Math.random() - 0.5) * netEvent.netRadius * 0.7;
-                f.y = netY + (Math.random() - 0.5) * netEvent.netRadius * 1.5;
-            }
-        }
-        // End event after swing
-        if (netEvent.t >= 1000) {
-            netEvent = null;
-        }
-
-        // Remove fish 1000ms after being scooped
-        fish = fish.filter(f => !(f.scoopedByNet && f.scoopedTime && now - f.scoopedTime > 1000));
-    }
-
     // Draw tank floor decorations (static, cached)
     if (!tankDecor) {
         tankDecor = generateTankDecor(width, height, WALL_WIDTH);
@@ -782,10 +639,16 @@ function animate(ctx, t, width, height) {
     }
     // Plants
     drawPlants(ctx, tankDecor.plants, t);
-    if (!fish.length) {
-        resetFish(width, height);
-        resetBubbles(width, height);
-    }
+    // Rocks
+    drawRocks(ctx, tankDecor.rocks);
+    foodPellets = foodPellets.filter(p => !p.eaten);
+    // Draw and update food pellets
+    drawFoodPellets(ctx, foodPellets, t, SURFACE_HEIGHT);
+    // Caustics
+    drawCaustics(ctx, width, height, t);
+    // Bubbles
+    drawBubbles(ctx, bubbles, t, width, height);
+    // Fish
     // Clamp fish to new bounds if canvas size changed
     if (ctx._fishW !== width || ctx._fishH !== height) {
         const minX = WALL_WIDTH;
@@ -799,16 +662,10 @@ function animate(ctx, t, width, height) {
         ctx._fishW = width;
         ctx._fishH = height;
     }
-    // Rocks
-    drawRocks(ctx, tankDecor.rocks);
-    foodPellets = foodPellets.filter(p => !p.eaten);
-    // Draw and update food pellets
-    drawFoodPellets(ctx, foodPellets, t, SURFACE_HEIGHT);
-    // Caustics
-    drawCaustics(ctx, width, height, t);
-    // Bubbles
-    drawBubbles(ctx, bubbles, t, width, height);
-    // Fish
+    if (!fish.length) {
+        resetFish(width, height);
+        resetBubbles(width, height);
+    }
     // Track indices of fish to remove (eaten)
     let fishToRemove = new Set();
     for (let i = 0; i < fish.length; i++) {
@@ -1051,6 +908,87 @@ function animate(ctx, t, width, height) {
     // Remove eaten fish (except sturgeons)
     if (fishToRemove.size > 0) {
         fish = fish.filter((f, idx) => !fishToRemove.has(idx));
+    }
+
+    // Rare random event: cartoon net on a pole swings in from the top
+    if (!netEvent && Math.random() < NET_PROBABILITY) {
+        startNetEvent(width, height);
+    }
+    if (netEvent) {
+        // Animate net swinging down
+        netEvent.t++;
+        let swingT = Math.min(1, netEvent.t * NET_SPEED);
+        let angle = netEvent.netAngleStart + (netEvent.netAngleEnd - netEvent.netAngleStart) * swingT * netEvent.swingDir;
+        // Net position at end of pole
+        let netX = netEvent.pivotX + Math.cos(angle) * netEvent.poleLen;
+        let netY = netEvent.pivotY + Math.sin(angle) * netEvent.poleLen;
+        // Draw pole
+        ctx.save();
+        ctx.globalAlpha = 0.8;
+        ctx.strokeStyle = '#a88';
+        ctx.lineWidth = 10;
+        ctx.beginPath();
+        ctx.moveTo(netEvent.pivotX, netEvent.pivotY);
+        ctx.lineTo(netX, netY);
+        ctx.stroke();
+        // Draw net hoop
+        ctx.save();
+        ctx.translate(netX, netY);
+        ctx.rotate(angle + Math.PI / 2);
+        ctx.strokeStyle = '#b8b8b8';
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.ellipse(0, 0, netEvent.netRadius, netEvent.netRadius * 2, 0, 0, Math.PI * 2);
+        ctx.stroke();
+        // Draw net mesh
+        ctx.setLineDash([8, 8]);
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        for (let i = 0; i < 8; i++) {
+            let meshAngle = (Math.PI * 2 / 8) * i;
+            ctx.moveTo(0, 0);
+            ctx.lineTo(Math.cos(meshAngle) * netEvent.netRadius, Math.sin(meshAngle) * netEvent.netRadius * 0.85);
+        }
+        ctx.strokeStyle = '#b8b8b8';
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.restore();
+        ctx.restore();
+
+        // Mark fish inside net ellipse as scooped and attach to net, but do not remove from fish array
+        const now = performance.now();
+        for (let f of fish) {
+            if (f.scoopedByNet) {
+                // Already scooped, update position to follow net
+                f.x = netX + (Math.random() - 0.5) * netEvent.netRadius * 0.7;
+                f.y = netY + (Math.random() - 0.5) * netEvent.netRadius * 1.5;
+                // If not already set, mark the time scooped
+                if (!f.scoopedTime) f.scoopedTime = now;
+                continue;
+            }
+            // Transform fish position into net's local ellipse space
+            let dx = f.x - netX;
+            let dy = f.y - netY;
+            let localX = Math.cos(-angle - Math.PI / 2) * dx - Math.sin(-angle - Math.PI / 2) * dy;
+            let localY = Math.sin(-angle - Math.PI / 2) * dx + Math.cos(-angle - Math.PI / 2) * dy;
+            // Ellipse: (x/a)^2 + (y/b)^2 < 1
+            let a = netEvent.netRadius;
+            let b = netEvent.netRadius * 2;
+            let inNet = (localX * localX) / (a * a) + (localY * localY) / (b * b) < 1;
+            if (inNet) {
+                f.scoopedByNet = true;
+                f.scoopedTime = now;
+                f.x = netX + (Math.random() - 0.5) * netEvent.netRadius * 0.7;
+                f.y = netY + (Math.random() - 0.5) * netEvent.netRadius * 1.5;
+            }
+        }
+        // End event after swing
+        if (netEvent.t >= 1000) {
+            netEvent = null;
+        }
+
+        // Remove fish 1000ms after being scooped
+        fish = fish.filter(f => !(f.scoopedByNet && f.scoopedTime && now - f.scoopedTime > 1000));
     }
 
     // Draw lily pads (float at top)

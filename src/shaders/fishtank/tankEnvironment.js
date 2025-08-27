@@ -1,5 +1,9 @@
 // Tank environment drawing and logic for fish tank simulation
 
+export function drawEnvironment() {
+
+}
+
 export function drawPlants(ctx, plants, t) {
     for (let p of plants) {
         ctx.save();
@@ -65,4 +69,68 @@ export function drawBubbles(ctx, bubbles, t, width, height) {
             b.vy = 0.5 + Math.random() * 0.7;
         }
     }
+}
+
+// Generate static decorations for the tank floor
+export function generateTankDecor(width, height, WALL_WIDTH) {
+    // Generate static decorations for the tank floor
+    // --- Continuous gravel band (static, cached) ---
+    let gravelBand = [];
+    let gravelBandY = height - WALL_WIDTH - 10;
+    let bandHeight = 18 * 2;
+    let bandCount = Math.floor((width - 2 * WALL_WIDTH) / 7);
+    for (let i = 0; i < bandCount; i++) {
+        let gx = WALL_WIDTH + 3 + i * 7 + Math.random() * 2;
+        let gy = gravelBandY + Math.random() * bandHeight;
+        gy = Math.min(gy, height - WALL_WIDTH - 2); // Clamp to bottom
+        let gr = (3.5 + Math.random() * 2.5) * 2;
+        gravelBand.push({
+            x: gx,
+            y: gy,
+            rx: gr,
+            ry: gr * (0.7 + Math.random() * 0.3),
+            color: `hsl(${35 + Math.random() * 30},${40 + Math.random() * 30}%,${60 + Math.random() * 20}%)`,
+            alpha: 0.38 + Math.random() * 0.18
+        });
+    }
+    // Individual gravel
+    let gravel = [];
+    for (let i = 0; i < 60; i++) {
+        let gy = height - WALL_WIDTH - 8 - Math.random() * 8 * 2;
+        gy = Math.min(gy, height - WALL_WIDTH - 2); // Clamp to bottom
+        gravel.push({
+            x: 20 + Math.random() * (width - 40),
+            y: gy,
+            r: (2.2 + Math.random() * 1.8) * 2,
+            color: `hsl(${35 + Math.random() * 30},${40 + Math.random() * 30}%,${60 + Math.random() * 20}%)`,
+            alpha: 0.45 + Math.random() * 0.25
+        });
+    }
+    let rocks = [];
+    for (let i = 0; i < 5; i++) {
+        let ry = height - WALL_WIDTH - 12 - Math.random() * 10 * 2;
+        ry = Math.min(ry, height - WALL_WIDTH - 2); // Clamp to bottom
+        rocks.push({
+            x: 30 + Math.random() * (width - 60),
+            y: ry,
+            rx: (12 + Math.random() * 10) * 2,
+            ry: (7 + Math.random() * 6) * 2,
+            rot: Math.random() * Math.PI,
+            color: `hsl(${180 + Math.random() * 60},${10 + Math.random() * 20}%,${30 + Math.random() * 20}%)`,
+            alpha: 0.7
+        });
+    }
+    let plants = [];
+    for (let i = 0; i < (5 + Math.random() * 10); i++) {
+        let baseY = height - WALL_WIDTH - 10;
+        baseY = Math.min(baseY, height - WALL_WIDTH - 2); // Clamp to bottom
+        plants.push({
+            x: 25 + Math.random() * (width - 50),
+            baseY: baseY,
+            h: (28 + Math.random() * 200) * 2,
+            color: `hsl(${90 + Math.random() * 60},${40 + Math.random() * 40}%,${30 + Math.random() * 30}%)`,
+            lw: (2 + Math.random() * 3) * 2
+        });
+    }
+    return { gravelBand, gravel, rocks, plants };
 }

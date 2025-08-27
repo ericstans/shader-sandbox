@@ -1,6 +1,6 @@
 // Food pellet creation, update, and drawing for fish tank simulation
 
-export function addFoodPellet(foodPellets, x, y) {
+export function addFoodPelletUtil(foodPellets, x, y) {
     foodPellets.push({
         x,
         y,
