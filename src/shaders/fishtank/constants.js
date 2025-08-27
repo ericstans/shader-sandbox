@@ -9,7 +9,7 @@ export const TRANSITION_MS = 1000; // 1 second transition
 export const NET_PROBABILITY = 1 / 5000;
 export const NET_SPEED = 1 / 30000;
 export const MAX_LILY_PADS = 8;
-export const LILY_PAD_SPAWN_CHANCE = 1 / 3000; // chance per frame
+export const LILY_PAD_SPAWN_CHANCE = 1/3; //1 / 3000; // chance per frame
 
 // Utility: clamp a value between min and max
 export function clamp(val, min, max) {
