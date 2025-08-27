@@ -15,6 +15,7 @@ import { addFoodPelletUtil, drawFoodPellets } from './fishtank/foodPellets.js';
 import { startNetEvent as startNetEventUtil, drawNetEvent } from './fishtank/netevent.js';
 import { drawLilyPads, spawnLilyPads } from './fishtank/lilyPads.js';
 import { speciesList } from './fishtank/species.js';
+import { layEggs, updateAndDrawEggs } from './fishtank/eggs.js';
 
 const displayName = 'Fish Tank';
 // Day/Night cycle state
@@ -536,34 +537,19 @@ function animate(ctx, t, width, height) {
         // Behavior timer
         f.behaviorTimer--;
         if (f.behaviorTimer <= 0) {
-            // Rare chance: lay eggs (unless 50 or more fish)
+            // Rare chance: lay eggs (unless 1000 or more fish)
             if (fish.length < 1000 && Math.random() < EGG_LAYING_PROBABILITY) {
-                // If Eyeball Fish, lay way more eggs; if Sturgeon, lay fewer eggs
                 let isEyeball = f.species && f.species.name === 'Eyeball Fish';
                 let isSturgeon = f.species && f.species.name === 'Sturgeon';
                 let numEggs;
                 if (isEyeball) {
                     numEggs = 18 + Math.floor(Math.random() * 10);
                 } else if (isSturgeon) {
-                    numEggs = 1 + Math.floor(Math.random() * 2); // Sturgeons lay only 1 or 2 eggs
+                    numEggs = 1 + Math.floor(Math.random() * 2);
                 } else {
                     numEggs = 2 + Math.floor(Math.random() * 4);
                 }
-                for (let i = 0; i < numEggs; i++) {
-                    let angle = Math.random() * Math.PI * 2;
-                    let dist = 10 + Math.random() * 18;
-                    // Add a small outward velocity proportional to distance
-                    let spreadV = 0.12 + Math.random() * 0.18;
-                    eggs.push({
-                        x: f.x + Math.cos(angle) * dist,
-                        y: f.y + Math.sin(angle) * dist,
-                        vx: Math.cos(angle) * (0.7 + spreadV * dist / 18) + (Math.random() - 0.5) * 0.5,
-                        vy: Math.sin(angle) * (0.7 + spreadV * dist / 18) + (Math.random() - 0.5) * 0.5,
-                        r: 4 + Math.random() * 2,
-                        hatchTimer: 1000 + Math.random() * 6000,
-                        species: f.species
-                    });
-                }
+                layEggs(eggs, f, numEggs);
             }
             // Pick a new behavior
             let behaviors = ['float', 'swim', 'explore', 'lookForFood'];
@@ -634,48 +620,8 @@ function animate(ctx, t, width, height) {
                 }
             }
         }
-        // Draw and update eggs
-        for (let i = eggs.length - 1; i >= 0; i--) {
-            let egg = eggs[i];
-            // Draw egg
-            ctx.save();
-            ctx.beginPath();
-            ctx.arc(egg.x, egg.y, egg.r, 0, Math.PI * 2);
-            ctx.fillStyle = egg.species ? egg.species.color() : '#fff';
-            ctx.globalAlpha = 0.7 + 0.3 * Math.sin(t * 0.2 + egg.x * 0.01);
-            ctx.shadowColor = '#fff';
-            ctx.shadowBlur = 8;
-            ctx.fill();
-            ctx.restore();
-            // Animate egg
-            egg.x += egg.vx;
-            egg.y += egg.vy;
-            egg.vx *= 0.96;
-            egg.vy *= 0.96;
-            // Gravity (sink to bottom)
-            // use imported WALL_WIDTH
-            const bottom = height - WALL_WIDTH - egg.r;
-            if (egg.y > bottom) { egg.y = bottom; egg.vy *= -0.3; }
-            // Hatch timer
-            egg.hatchTimer--;
-            if (egg.hatchTimer <= 0) {
-                // Hatch: add new fish of same species
-                fish.push({
-                    x: egg.x,
-                    y: egg.y,
-                    vx: (Math.random() * 0.5 + 0.3) * (Math.random() < 0.5 ? -1 : 1),
-                    vy: (Math.random() - 0.5) * 0.2,
-                    size: 18 + Math.random() * 18,
-                    color: egg.species.color(),
-                    flip: Math.random() < 0.5,
-                    behavior: 'float',
-                    behaviorTimer: 60 + Math.random() * 120,
-                    target: null,
-                    species: egg.species
-                });
-                eggs.splice(i, 1);
-            }
-        }
+    // Draw and update eggs
+    updateAndDrawEggs(ctx, eggs, t, width, height, WALL_WIDTH, fish);
         // Behavior logic
         let vx = f.vx, vy = f.vy;
         if (f.behavior === 'sleep') {
