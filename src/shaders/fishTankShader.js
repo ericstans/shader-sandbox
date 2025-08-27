@@ -10,6 +10,7 @@ const NET_PROBABILITY = 1 / 5000;
 const NET_SPEED = 1 / 30000
 const MAX_LILY_PADS = 8;
 const LILY_PAD_SPAWN_CHANCE = 1 / 3000; // chance per frame
+const FISH_SHOW_BEHAVIOR_LABELS = true;
 
 let fish = [];
 let netEvent = null;
@@ -361,6 +362,28 @@ function resetBubbles(width, height) {
 function drawFish(ctx, f, t) {
     ctx.save();
     ctx.translate(f.x, f.y);
+
+    // Draw behavior label BEFORE flipping, so text is always readable
+    if (typeof FISH_SHOW_BEHAVIOR_LABELS !== 'undefined' && FISH_SHOW_BEHAVIOR_LABELS && f.behavior) {
+        ctx.save();
+        ctx.font = `${Math.max(12, Math.round(f.size * 1.2))}px sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'bottom';
+        // Draw background for readability
+        const label = f.behavior;
+        const padY = f.size * f.species.body.ry + 6;
+        const metrics = ctx.measureText(label);
+        const bgW = metrics.width + 10;
+        const bgH = Math.max(18, Math.round(f.size * 1.2));
+        ctx.globalAlpha = 0.7;
+        ctx.fillStyle = '#222';
+        ctx.fillRect(-bgW/2, -padY - bgH + 2, bgW, bgH);
+        ctx.globalAlpha = 1;
+        ctx.fillStyle = '#fff';
+        ctx.fillText(label, 0, -padY);
+        ctx.restore();
+    }
+
     if (f.flip) ctx.scale(-1, 1);
     ctx.rotate(Math.sin(t * 0.7 + f.x * 0.01 + f.y * 0.01) * 0.1);
     // --- Draw tail by species ---
@@ -935,45 +958,51 @@ function animate(ctx, t, width, height) {
             // Pick a new behavior
             let behaviors = ['float', 'swim', 'explore', 'lookForFood'];
             let next = behaviors[Math.floor(Math.random() * behaviors.length)];
-            f.behavior = next;
-            // Enforce at least 30 frames for 'explore' mode
-            if (next === 'explore') {
-                f.behaviorTimer = 30 + Math.random() * 1200;
-            } else {
-                f.behaviorTimer = 60 + Math.random() * 1200;
-            }
-            if (next === 'lookForFood' && foodPellets.some(p => !p.eaten)) {
-                // Target the nearest uneaten food pellet
-                let minDist = Infinity, targetPellet = null;
-                for (let pellet of foodPellets) {
-                    if (pellet.eaten) continue;
-                    let dx = pellet.x - f.x;
-                    let dy = pellet.y - f.y;
-                    let dist = dx * dx + dy * dy;
-                    if (dist < minDist) {
-                        minDist = dist;
-                        targetPellet = pellet;
-                    }
-                }
-                if (targetPellet) {
-                    f.target = { x: targetPellet.x, y: targetPellet.y, pellet: targetPellet };
+            f.behaviorTimer--;
+            // If in lookForFood, stay in that behavior as long as there are uneaten pellets
+            if (f.behavior === 'lookForFood') {
+                if (!foodPellets.some(p => !p.eaten)) {
+                    // No more food, switch to another behavior
+                    let behaviors = ['float', 'swim', 'explore'];
+                    let next = behaviors[Math.floor(Math.random() * behaviors.length)];
+                    f.behavior = next;
+                    f.behaviorTimer = 60 + Math.random() * 1200;
                 } else {
-                    // fallback to random target
+                    // Stay in lookForFood until a pellet is eaten
+                    f.behaviorTimer = 30; // keep resetting timer to prevent random change
+                }
+            } else if (f.behaviorTimer <= 0) {
+                // Pick a new behavior
+                let behaviors = ['float', 'swim', 'explore', 'lookForFood'];
+                let next = behaviors[Math.floor(Math.random() * behaviors.length)];
+                f.behavior = next;
+                if (next === 'lookForFood' && foodPellets.some(p => !p.eaten)) {
+                    // Target nearest pellet
+                    let nearest = null, minDist = 1e9;
+                    for (let pellet of foodPellets) {
+                        if (pellet.eaten) continue;
+                        let dx = pellet.x - f.x, dy = pellet.y - f.y;
+                        let dist = dx*dx + dy*dy;
+                        if (dist < minDist) { minDist = dist; nearest = pellet; }
+                    }
+                    if (nearest) f.target = { pellet: nearest };
+                }
+                if (next === 'float') {
+                    f.behaviorTimer = 30 + Math.random() * 1200;
+                } else {
+                    f.behaviorTimer = 60 + Math.random() * 1200;
+                }
+                // fallback to random target if not lookForFood
+                if (next === 'explore') {
+                    // Pick a random target in tank
                     const WALL_WIDTH = 10;
                     f.target = {
                         x: WALL_WIDTH + f.size * 0.7 + Math.random() * (width - 2 * WALL_WIDTH - f.size * 1.4),
                         y: WALL_WIDTH + f.size * 0.5 + Math.random() * (height - 2 * WALL_WIDTH - f.size)
                     };
+                } else {
+                    f.target = null;
                 }
-            } else if (next === 'explore') {
-                // Pick a random target in tank
-                const WALL_WIDTH = 10;
-                f.target = {
-                    x: WALL_WIDTH + f.size * 0.7 + Math.random() * (width - 2 * WALL_WIDTH - f.size * 1.4),
-                    y: WALL_WIDTH + f.size * 0.5 + Math.random() * (height - 2 * WALL_WIDTH - f.size)
-                };
-            } else {
-                f.target = null;
             }
         }
         // Draw and update eggs
