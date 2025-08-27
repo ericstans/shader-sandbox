@@ -1,16 +1,19 @@
+
+import {
+    WALL_WIDTH,
+    SURFACE_HEIGHT,
+    EGG_LAYING_PROBABILITY,
+    FISH_SHOW_BEHAVIOR_LABELS,
+    DAY_LENGTH_MS,
+    TRANSITION_MS,
+    NET_PROBABILITY,
+    NET_SPEED,
+    MAX_LILY_PADS,
+    LILY_PAD_SPAWN_CHANCE
+} from './fishtank/constants.js';
+
 const displayName = 'Fish Tank';
 // Day/Night cycle state
-
-const WALL_WIDTH = 10;
-const SURFACE_HEIGHT = 10;
-const DAY_LENGTH_MS = 18000; // 18 seconds day, 18 seconds night
-const TRANSITION_MS = 1000; // 1 second transition
-const EGG_LAYING_PROBABILITY = 1 / 150;
-const NET_PROBABILITY = 1 / 5000;
-const NET_SPEED = 1 / 30000
-const MAX_LILY_PADS = 8;
-const LILY_PAD_SPAWN_CHANCE = 1 / 3000; // chance per frame
-const FISH_SHOW_BEHAVIOR_LABELS = true;
 
 let fish = [];
 let netEvent = null;
@@ -628,7 +631,6 @@ function animate(ctx, t, width, height) {
     // Lily pad spawning logic
     if (lilyPads.length < MAX_LILY_PADS && Math.random() < LILY_PAD_SPAWN_CHANCE) {
         // Spawn a lily pad at a random X, floating at the top, with drop-in animation
-        const WALL_WIDTH = 10;
         let padW = 38 + Math.random() * 22;
         let padH = padW * (0.7 + Math.random() * 0.2);
         let padX = WALL_WIDTH + padW / 2 + Math.random() * (width - 2 * WALL_WIDTH - padW);
@@ -1014,7 +1016,7 @@ function animate(ctx, t, width, height) {
                 // fallback to random target if not lookForFood
                 if (next === 'explore') {
                     // Pick a random target in tank
-                    const WALL_WIDTH = 10;
+                    // use imported WALL_WIDTH
                     f.target = {
                         x: WALL_WIDTH + f.size * 0.7 + Math.random() * (width - 2 * WALL_WIDTH - f.size * 1.4),
                         y: WALL_WIDTH + f.size * 0.5 + Math.random() * (height - 2 * WALL_WIDTH - f.size)
@@ -1043,7 +1045,7 @@ function animate(ctx, t, width, height) {
             egg.vx *= 0.96;
             egg.vy *= 0.96;
             // Gravity (sink to bottom)
-            const WALL_WIDTH = 10;
+            // use imported WALL_WIDTH
             const bottom = height - WALL_WIDTH - egg.r;
             if (egg.y > bottom) { egg.y = bottom; egg.vy *= -0.3; }
             // Hatch timer
